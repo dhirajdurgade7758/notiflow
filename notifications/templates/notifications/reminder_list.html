@@ -1,0 +1,48 @@
+{% extends "notifications/base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>🔔 My Reminders</h2>
+  <hr>
+  <a href="{% url 'create_reminder' %}" class="btn btn-success mb-3">+ Create New Reminder</a>
+
+  {% if reminders %}
+    <table class="table table-bordered table-striped">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Message</th>
+          <th>Send At</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Repeat</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in reminders %}
+        <tr>
+          <td>{{ r.title }}</td>
+          <td>{{ r.message|truncatechars:50 }}</td>
+          <td>{{ r.send_at|date:"Y-m-d H:i" }}</td>
+          <td>{{ r.get_notify_type_display }}</td>
+          <td>
+            <span class="badge bg-{{ r.status|yesno:'success,danger,secondary,warning' }}">{{ r.status|capfirst }}</span>
+          </td>
+          <td>{{ r.get_repeat_display }}</td>
+          <td>
+            {% if r.status == "scheduled" and r.is_active %}
+              <a href="{% url 'cancel_reminder' r.pk %}" class="btn btn-sm btn-danger">Cancel</a>
+            {% else %}
+              <span class="text-muted">N/A</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No reminders found. <a href="{% url 'create_reminder' %}">Create one now</a>.</p>
+  {% endif %}
+</div>
+{% endblock %}

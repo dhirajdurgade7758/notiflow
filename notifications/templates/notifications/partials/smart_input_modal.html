@@ -1,0 +1,13 @@
+<form method="post" hx-post="{% url 'smart-reminder-modal' %}" hx-target="#modal-content" hx-swap="innerHTML">
+  {% csrf_token %}
+  <div class="modal-header">
+    <h5 class="modal-title">🧠 Smart Reminder Assistant</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+  </div>
+  <div class="modal-body">
+    <textarea name="input" class="form-control" placeholder="e.g., Remind me to take medicine every night at 9 PM in a gentle tone"></textarea>
+  </div>
+  <div class="modal-footer">
+    <button type="submit" class="btn btn-primary">Generate</button>
+  </div>
+</form>

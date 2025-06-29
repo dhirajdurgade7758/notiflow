@@ -1,0 +1,15 @@
+{% extends "notifications/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>📅 Create New Reminder</h2>
+  <hr>
+  <form method="post">
+    {% csrf_token %}
+    {{ form|crispy }}
+    <button type="submit" class="btn btn-primary mt-2">Schedule Reminder</button>
+    <a href="{% url 'reminder_list' %}" class="btn btn-secondary mt-2">Back to List</a>
+  </form>
+</div>
+{% endblock %}

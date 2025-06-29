@@ -1,0 +1,37 @@
+{% extends "notifications/base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>🔔 In-App Notifications</h2>
+  <div class="mb-3">
+  <a href="?filter=all" class="btn btn-sm btn-outline-primary">All</a>
+  <a href="?filter=unread" class="btn btn-sm btn-outline-warning">Unread</a>
+  <a href="?filter=read" class="btn btn-sm btn-outline-success">Read</a>
+</div>
+
+  <hr>
+  {% if notifications %}
+    <ul class="list-group">
+  {% for n in notifications %}
+  <li class="list-group-item d-flex justify-content-between align-items-start">
+    <div>
+      <strong>{{ n.title }}</strong><br>
+      {{ n.message }}<br>
+      <small class="text-muted">{{ n.created_at|timesince }} ago</small>
+    </div>
+    <div>
+      {% if n.is_read %}
+        <a href="{% url 'mark_as_unread' n.pk %}" class="btn btn-sm btn-outline-secondary">Mark as Unread</a>
+      {% else %}
+        <a href="{% url 'mark_as_read' n.pk %}" class="btn btn-sm btn-outline-success">Mark as Read</a>
+      {% endif %}
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+
+  {% else %}
+    <p>No notifications yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

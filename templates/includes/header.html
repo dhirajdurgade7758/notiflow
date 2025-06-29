@@ -1,0 +1,68 @@
+{% load static %}
+<header class="flex items-center justify-between bg-gray-800 h-20 px-8 text-white sticky top-0 z-40">
+    <div>
+        <a class="flex items-center gap-2" href="/">
+            <img class="h-6" src="{% static 'images/logo.svg' %}" alt="Logo"/>
+            <span class="text-lg font-bold">RealTime ChatApp</span>
+        </a>
+        <div id="online-user-count"></div>
+    </div>
+    <nav class="block relative">
+        <ul class="navitems flex items-center justify-center h-full gap-6">
+            <li><a href="/">Public Chat</a></li>
+            
+            <!-- Chats Dropdown -->
+            <li x-data="{ chatsOpen: false }" class="relative">
+                <a @click="chatsOpen = !chatsOpen" @click.away="chatsOpen = false" class="cursor-pointer select-none flex items-center gap-1">
+                    <span>My Chats</span>
+                    <img x-bind:class="chatsOpen && 'rotate-180 duration-300'" class="w-4" src="https://img.icons8.com/small/32/ffffff/expand-arrow.png" alt="Dropdown" />
+                </a>
+                <div id="online-in-chats">
+                <div x-show="chatsOpen" x-cloak class="absolute right-0 bg-gray-700 text-white shadow-xl rounded-lg w-64 max-h-[80vh] overflow-y-auto z-20 mt-2"
+                x-transition:enter="duration-300 ease-out"
+                x-transition:enter-start="opacity-0 -translate-y-5 scale-90"
+                x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                >
+                    <div class="p-3 border-b border-gray-600">
+                        <h3 class="font-semibold text-sm uppercase text-gray-300">Group Chats</h3>
+                        <ul class="mt-2 space-y-1">
+                       
+                        </ul>
+                    </div>
+                    
+                    <div class="p-3">
+                        <h3 class="font-semibold text-sm uppercase text-gray-300">Private Chats</h3>
+                      
+                    </div>
+                </div>
+            </li>
+            
+            <!-- User Dropdown -->
+            {% if request.user.is_authenticated %}
+            <li x-data="{ dropdownOpen: false }" class="relative">
+                <a @click="dropdownOpen = !dropdownOpen" @click.away="dropdownOpen = false" class="cursor-pointer select-none flex items-center gap-2">
+                    <img class="h-8 w-8 rounded-full object-cover" src="{{ request.user.profile.avatar }}" alt="Avatar" />
+                    <span class="hidden md:inline">{{ request.user.profile.name }}</span>
+                    <img x-bind:class="dropdownOpen && 'rotate-180 duration-300'" class="w-4" src="https://img.icons8.com/small/32/ffffff/expand-arrow.png" alt="Dropdown" />
+                </a>
+                <div x-show="dropdownOpen" x-cloak class="absolute right-0 bg-white text-black shadow rounded-lg w-48 z-20 mt-2"
+                x-transition:enter="duration-300 ease-out"
+                x-transition:enter-start="opacity-0 -translate-y-5 scale-90"
+                x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                >
+                    <ul class="py-1">
+                        <li><a href="{% url 'profile' %}" class="block px-4 py-2 hover:bg-gray-100">My Profile</a></li>
+                        <li><a href="{% url 'profile-edit' %}" class="block px-4 py-2 hover:bg-gray-100">Edit Profile</a></li>
+                        <li><a href="{% url 'profile-settings' %}" class="block px-4 py-2 hover:bg-gray-100">Settings</a></li>
+                        <li class="border-t border-gray-200"></li>
+                        <li><a href="{% url 'account_logout' %}" class="block px-4 py-2 hover:bg-gray-100 text-red-500">Log Out</a></li>
+                    </ul>
+                </div>
+            </li>
+            {% else %}
+            <li><a href="{% url 'account_login' %}" class="px-4 py-2 rounded hover:bg-gray-700">Login</a></li>
+            <li><a href="{% url 'account_signup' %}?next={% url 'profile-onboarding' %}" class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700">Signup</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+</header>

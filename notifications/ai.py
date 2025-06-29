@@ -1,0 +1,97 @@
+import requests
+import json
+import dateparser
+from django.conf import settings
+
+GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_API_KEY = settings.GROQ_API_KEY  # Set this in your Django settings
+
+HEADERS = {
+    "Authorization": f"Bearer {GROQ_API_KEY}",
+    "Content-Type": "application/json"
+}
+
+MODEL = "llama3-70b-8192"
+
+
+
+import re
+from ast import literal_eval
+
+def parse_natural_reminder(text):
+    prompt = (
+        f"You are a helpful assistant. Extract structured reminder details from the user's instruction below:\n\n"
+        f"'{text}'\n\n"
+        "Return ONLY a valid JSON object with the following keys:\n"
+        "- title: short title of the reminder\n"
+        "- message: full message to send\n"
+        " - notify_type: one of 'email', 'inapp', or 'sms'. If user didn't specify, return 'email'.\n"
+        "- repeat: one of 'none', 'daily', 'weekly', 'monthly'\n"
+        "- datetime: ISO format datetime string like '2025-06-25T21:00:00'. If user didn't specify, return null.\n"
+        "- tone: one of 'friendly', 'formal', 'motivational', 'gentle', or null if unspecified.\n\n"
+        "Wrap the JSON in a code block like ```json ... ```"
+    )
+
+    payload = {
+        "model": MODEL,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.4
+    }
+
+    response = requests.post(GROQ_API_URL, headers=HEADERS, data=json.dumps(payload))
+    response.raise_for_status()
+    data = response.json()
+    content = data["choices"][0]["message"]["content"]
+
+    # Extract JSON
+    match = re.search(r"```(?:json)?\s*({.*?})\s*```", content, re.DOTALL)
+    if match:
+        json_block = match.group(1)
+    else:
+        match = re.search(r"({.*})", content, re.DOTALL)
+        if not match:
+            raise ValueError("No JSON found.")
+        json_block = match.group(1)
+
+    json_block = re.sub(r"//.*", "", json_block)
+
+    try:
+        return json.loads(json_block)
+    except json.JSONDecodeError:
+        return literal_eval(json_block)
+
+
+def rewrite_message_tone(message, tone="friendly"):
+    prompt = (
+        f"Rewrite the following reminder message in a {tone} tone.\n"
+        "Only return the rewritten message, no explanation or intro:\n\n"
+        f"{message}"
+    )
+
+    payload = {
+        "model": MODEL,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.6
+    }
+
+    response = requests.post(GROQ_API_URL, headers=HEADERS, data=json.dumps(payload))
+    response.raise_for_status()
+
+    return response.json()["choices"][0]["message"]["content"].strip()
+
+
+def transcribe_audio(file_path):
+    files = {
+        'file': open(file_path, 'rb')
+    }
+    data = {
+        "model": "whisper-1"
+    }
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}"
+    }
+
+    response = requests.post("https://api.groq.com/openai/v1/audio/transcriptions", data=data, files=files, headers=headers)
+    response.raise_for_status()
+
+    return response.json()['text']

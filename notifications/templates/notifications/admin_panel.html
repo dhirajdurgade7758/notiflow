@@ -1,0 +1,75 @@
+{% extends "notifications/base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>🔒 Admin Reminder Monitor</h2>
+  <hr>
+
+  <div class="row mb-3">
+    {% for key, value in stats.items %}
+      <div class="col-md-2 mb-2">
+        <div class="card text-bg-light text-center p-2">
+          <strong>{{ key|capfirst }}:</strong><br> {{ value }}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <form method="get" class="row mb-3">
+    <div class="col-md-3">
+      <input type="text" name="user" class="form-control" placeholder="Search by username" value="{{ user_filter }}">
+    </div>
+    <div class="col-md-3">
+      <select name="status" class="form-select">
+        <option value="">-- Status --</option>
+        <option value="scheduled" {% if status_filter == 'scheduled' %}selected{% endif %}>Scheduled</option>
+        <option value="sent" {% if status_filter == 'sent' %}selected{% endif %}>Sent</option>
+        <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>Failed</option>
+        <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-primary" type="submit">Filter</button>
+    </div>
+  </form>
+
+  <table class="table table-bordered table-striped">
+    <thead>
+      <tr>
+        <th>User</th>
+        <th>Title</th>
+        <th>Status</th>
+        <th>Repeat</th>
+        <th>Notify</th>
+        <th>Send At</th>
+        <th>Failures</th>
+
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in reminders %}
+      <tr>
+        <td>{{ r.user.username }}</td>
+        <td>{{ r.title }}</td>
+        <td><span class="badge bg-{{ r.status|yesno:'success,danger,secondary,warning' }}">{{ r.status }}</span></td>
+        <td>{{ r.get_repeat_display }}</td>
+        <td>{{ r.get_notify_type_display }}</td>
+        <td>{{ r.send_at|date:"Y-m-d H:i" }}</td>
+        <td>
+  {% if r.status == 'failed' and r.failure_logs.exists %}
+    <ul class="list-unstyled">
+      {% for log in r.failure_logs.all %}
+        <li><code>{{ log.timestamp|date:"Y-m-d H:i" }}</code><br>{{ log.error_message|truncatechars:80 }}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <span class="text-muted">—</span>
+  {% endif %}
+</td>
+
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends "notifications/base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>📊 Dashboard</h2>
+  <hr>
+
+  <div class="row mb-4">
+    <div class="col-md-2"><div class="card text-bg-primary p-3">Total: {{ stats.total }}</div></div>
+    <div class="col-md-2"><div class="card text-bg-success p-3">Sent: {{ stats.sent }}</div></div>
+    <div class="col-md-2"><div class="card text-bg-warning p-3">Scheduled: {{ stats.scheduled }}</div></div>
+    <div class="col-md-2"><div class="card text-bg-danger p-3">Failed: {{ stats.failed }}</div></div>
+    <div class="col-md-2"><div class="card text-bg-secondary p-3">Cancelled: {{ stats.cancelled }}</div></div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-6">
+      <h5>⏰ Upcoming Reminders</h5>
+      {% if reminders %}
+        <ul class="list-group">
+          {% for r in reminders %}
+            <li class="list-group-item">
+              <strong>{{ r.title }}</strong> - {{ r.send_at|date:"M d, H:i" }}
+              <br><small>Status: {{ r.status|capfirst }}</small>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-muted">No upcoming reminders.</p>
+      {% endif %}
+    </div>
+
+    <div class="col-md-6">
+      <h5>🔔 Recent Alerts</h5>
+      {% if alerts %}
+        <ul class="list-group">
+          {% for a in alerts %}
+            <li class="list-group-item">
+              <strong>{{ a.title }}</strong><br>
+              {{ a.message|truncatechars:60 }}
+              <br><small class="text-muted">{{ a.created_at|timesince }} ago</small>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-muted">No recent alerts.</p>
+      {% endif %}
+    </div>
+  </div>
+  <!-- Modal Shell -->
+<div id="modal" class="modal fade" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content" id="modal-content">
+      <!-- HTMX loads content here -->
+    </div>
+  </div>
+</div>
+
+  <button class="btn btn-primary" 
+        hx-get="{% url 'smart-reminder-modal' %}" 
+        hx-target="#modal-content" 
+        hx-trigger="click" 
+        hx-swap="innerHTML">
+    🧠 Create Smart Reminder
+</button>
+
+
+  <div class="mt-4">
+    <a href="{% url 'create_reminder' %}" class="btn btn-primary">+ Create New Reminder</a>
+    
+    <a href="{% url 'reminder_list' %}" class="btn btn-secondary">📋 View All Reminders</a>
+    <a href="{% url 'reminder_history' %}" class="btn btn-outline-dark">📜 View Reminder History</a>
+    <a href="{% url 'inapp_notifications' %}" class="btn btn-info">🔔 View All Alerts</a>
+  </div>
+</div>
+<script>
+  document.body.addEventListener('htmx:afterSwap', (e) => {
+    if (e.detail.target.id === "modal-content") {
+      const modal = new bootstrap.Modal(document.getElementById('modal'));
+      modal.show();
+    }
+  });
+</script>
+
+{% endblock %}

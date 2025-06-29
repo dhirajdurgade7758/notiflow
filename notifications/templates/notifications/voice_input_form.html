@@ -1,0 +1,14 @@
+{% extends "notifications/base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>🎤 Create Reminder from Voice</h2>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="mb-3">
+      <input type="file" name="audio_file" accept="audio/*" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-success">Transcribe & Create Reminder</button>
+  </form>
+</div>
+{% endblock %}
