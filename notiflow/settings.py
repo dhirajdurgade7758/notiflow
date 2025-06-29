@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -169,5 +170,4 @@ AUTHENTICATION_BACKENDS = [
 TWILIO_ACCOUNT_SID = 'ACa0f3c1a6c4b0e0fe8ac2b368aefb6a43'
 TWILIO_AUTH_TOKEN = 'aee22c0691c9dbd454031da3c05004ae'
 TWILIO_PHONE_NUMBER = '+15343447758'
-# OPENAI_API_KEY = "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"  # Secure this via env in prod
-GROQ_API_KEY = "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"
+GROQ_API_KEY = os.getenv('GROQ_API_KEY')
