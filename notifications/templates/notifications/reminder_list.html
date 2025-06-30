@@ -1,48 +1,174 @@
 {% extends "notifications/base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-  <h2>🔔 My Reminders</h2>
-  <hr>
-  <a href="{% url 'create_reminder' %}" class="btn btn-success mb-3">+ Create New Reminder</a>
+<div class="container-fluid px-4 py-3">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="fw-bold text-gradient mb-1">My Reminders</h2>
+      <p class="text-muted">Manage your scheduled notifications and alerts</p>
+    </div>
+    <a href="{% url 'create_reminder' %}" class="btn btn-success btn-glow">
+      <i class="bi bi-plus-circle me-1"></i> Create New
+    </a>
+  </div>
 
   {% if reminders %}
-    <table class="table table-bordered table-striped">
-      <thead>
-        <tr>
-          <th>Title</th>
-          <th>Message</th>
-          <th>Send At</th>
-          <th>Type</th>
-          <th>Status</th>
-          <th>Repeat</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for r in reminders %}
-        <tr>
-          <td>{{ r.title }}</td>
-          <td>{{ r.message|truncatechars:50 }}</td>
-          <td>{{ r.send_at|date:"Y-m-d H:i" }}</td>
-          <td>{{ r.get_notify_type_display }}</td>
-          <td>
-            <span class="badge bg-{{ r.status|yesno:'success,danger,secondary,warning' }}">{{ r.status|capfirst }}</span>
-          </td>
-          <td>{{ r.get_repeat_display }}</td>
-          <td>
-            {% if r.status == "scheduled" and r.is_active %}
-              <a href="{% url 'cancel_reminder' r.pk %}" class="btn btn-sm btn-danger">Cancel</a>
-            {% else %}
-              <span class="text-muted">N/A</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="card shadow-sm">
+      <div class="card-body p-0">
+        <div class="table-responsive" style="max-height: calc(100vh - 150px); overflow-y: auto;">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light sticky-top" style="z-index: 1;">
+              <tr>
+                <th class="ps-4">Title</th>
+                <th>Message</th>
+                <th>Send At</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Repeat</th>
+                <th class="text-end pe-4">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in reminders %}
+              <tr class="hover-scale">
+                <td class="ps-4 fw-semibold">{{ r.title }}</td>
+                <td>{{ r.message|truncatechars:50 }}</td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <i class="bi bi-calendar me-2 text-primary"></i>
+                    {{ r.send_at|date:"M d, Y H:i" }}
+                  </div>
+                </td>
+                <td>
+                  <span class="badge bg-info bg-opacity-10 text-info">
+                    {{ r.get_notify_type_display }}
+                  </span>
+                </td>
+                <td>
+                  <span class="badge bg-{% if r.status == 'sent' %}success{% elif r.status == 'failed' %}danger{% elif r.status == 'scheduled' %}warning{% else %}secondary{% endif %}-soft">
+                    {{ r.status|capfirst }}
+                  </span>
+                </td>
+                <td>
+                  {% if r.repeat != 'none' %}
+                    <span class="badge bg-purple-soft">
+                      <i class="bi bi-arrow-repeat me-1"></i>{{ r.get_repeat_display }}
+                    </span>
+                  {% else %}
+                    <span class="text-muted">None</span>
+                  {% endif %}
+                </td>
+                <td class="text-end pe-4">
+                  {% if r.status == "scheduled" and r.is_active %}
+                    <a href="{% url 'cancel_reminder' r.pk %}" class="btn btn-sm btn-danger btn-pill">
+                      <i class="bi bi-x-circle me-1"></i>Cancel
+                    </a>
+                  {% else %}
+                    <span class="text-muted small">No actions</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   {% else %}
-    <p>No reminders found. <a href="{% url 'create_reminder' %}">Create one now</a>.</p>
+    <div class="card shadow-sm">
+      <div class="card-body text-center py-5">
+        <div class="empty-state-icon mb-3">
+          <i class="bi bi-bell" style="font-size: 2.5rem;"></i>
+        </div>
+        <h4 class="mb-2">No reminders found</h4>
+        <p class="text-muted mb-4">You haven't created any reminders yet</p>
+        <a href="{% url 'create_reminder' %}" class="btn btn-primary btn-glow">
+          <i class="bi bi-plus-circle me-1"></i> Create Your First Reminder
+        </a>
+      </div>
+    </div>
   {% endif %}
 </div>
+
+<style>
+  /* Custom styles for the table */
+  .table {
+    --bs-table-bg: var(--bs-card-bg);
+    --bs-table-striped-bg: rgba(78, 84, 200, 0.02);
+    --bs-table-hover-bg: rgba(78, 84, 200, 0.05);
+  }
+  
+[data-bs-theme="dark"] .table-light {
+  --bs-table-bg: #2d2d2d;  /* Slightly darker than card bg */
+  --bs-table-color: var(--bs-heading-color);
+  border-bottom-color: #444;
+}
+  /* Add this to your style section */
+.table-light {
+  --bs-table-bg: var(--bs-card-bg);
+  --bs-table-color: var(--bs-heading-color);
+  background-color: var(--bs-table-bg);
+  color: var(--bs-table-color);
+}
+
+
+  
+  .table th {
+    border-bottom-width: 1px;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    color: var(--bs-text-muted);
+  }
+  
+  .table-hover tbody tr {
+    transition: all 0.2s ease;
+  }
+  
+  .bg-purple-soft {
+    background-color: rgba(111, 66, 193, 0.1);
+    color: #6f42c1;
+  }
+  
+  .empty-state-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: #6c757d;
+    background-color: rgba(108, 117, 125, 0.1);
+  }
+
+
+  /* Make the header stick when scrolling */
+.sticky-top {
+  position: sticky;
+  top: 0;
+  background-color: inherit; /* Inherits from table-light */
+}
+
+/* Ensure proper z-index for header */
+.table-responsive {
+  position: relative;
+}
+
+/* Scrollbar styling */
+.table-responsive::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background-color: rgba(78, 84, 200, 0.3);
+  border-radius: 4px;
+}
+
+[data-bs-theme="dark"] .table-responsive::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+</style>
 {% endblock %}

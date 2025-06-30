@@ -1,37 +1,134 @@
 {% extends "notifications/base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-  <h2>🔔 In-App Notifications</h2>
-  <div class="mb-3">
-  <a href="?filter=all" class="btn btn-sm btn-outline-primary">All</a>
-  <a href="?filter=unread" class="btn btn-sm btn-outline-warning">Unread</a>
-  <a href="?filter=read" class="btn btn-sm btn-outline-success">Read</a>
-</div>
+<div class="container-fluid px-4 py-3">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="fw-bold text-gradient mb-1">In-App Notifications</h2>
+      <p class="text-muted">View and manage your notifications</p>
+    </div>
+    <div class="btn-group">
+      <a href="?filter=all" class="btn btn-sm btn-primary btn-glow">
+        <i class="bi bi-list-ul me-1"></i> All
+      </a>
+      <a href="?filter=unread" class="btn btn-sm btn-warning btn-glow">
+        <i class="bi bi-envelope me-1"></i> Unread
+      </a>
+      <a href="?filter=read" class="btn btn-sm btn-success btn-glow">
+        <i class="bi bi-envelope-open me-1"></i> Read
+      </a>
+    </div>
+  </div>
 
-  <hr>
   {% if notifications %}
-    <ul class="list-group">
-  {% for n in notifications %}
-  <li class="list-group-item d-flex justify-content-between align-items-start">
-    <div>
-      <strong>{{ n.title }}</strong><br>
-      {{ n.message }}<br>
-      <small class="text-muted">{{ n.created_at|timesince }} ago</small>
+    <div class="card shadow-sm">
+      <div class="card-body p-0">
+        <div class="list-group list-group-flush" style="max-height: calc(100vh - 200px); overflow-y: auto;">
+          {% for n in notifications %}
+          <div class="list-group-item border-0 px-4 py-3 hover-scale {% if not n.is_read %}bg-light bg-opacity-50{% endif %}">
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="flex-grow-1 me-3">
+                <div class="d-flex align-items-center mb-1">
+                  <h5 class="mb-0 fw-semibold">{{ n.title }}</h5>
+                  {% if not n.is_read %}
+                    <span class="badge bg-warning bg-opacity-15 text-warning ms-2">New</span>
+                  {% endif %}
+                </div>
+                <p class="mb-2">{{ n.message }}</p>
+                <small class="text-muted">
+                  <i class="bi bi-clock me-1"></i>{{ n.created_at|timesince }} ago
+                </small>
+              </div>
+              <div>
+                {% if n.is_read %}
+                  <a href="{% url 'mark_as_unread' n.pk %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-envelope me-1"></i> Mark Unread
+                  </a>
+                {% else %}
+                  <a href="{% url 'mark_as_read' n.pk %}" class="btn btn-sm btn-success">
+                    <i class="bi bi-envelope-open me-1"></i> Mark Read
+                  </a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
     </div>
-    <div>
-      {% if n.is_read %}
-        <a href="{% url 'mark_as_unread' n.pk %}" class="btn btn-sm btn-outline-secondary">Mark as Unread</a>
-      {% else %}
-        <a href="{% url 'mark_as_read' n.pk %}" class="btn btn-sm btn-outline-success">Mark as Read</a>
-      {% endif %}
-    </div>
-  </li>
-  {% endfor %}
-</ul>
-
   {% else %}
-    <p>No notifications yet.</p>
+    <div class="card shadow-sm">
+      <div class="card-body text-center py-5">
+        <div class="empty-state-icon mb-3">
+          <i class="bi bi-bell" style="font-size: 2.5rem;"></i>
+        </div>
+        <h4 class="mb-2">No notifications yet</h4>
+        <p class="text-muted mb-4">Your notifications will appear here</p>
+      </div>
+    </div>
   {% endif %}
+
+  <div class="mt-4">
+    <a href="{% url 'user_dashboard' %}" class="btn btn-secondary btn-glow">
+      <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+    </a>
+  </div>
 </div>
+
+<style>
+  /* List group item styling */
+  .list-group-item {
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+  }
+  
+  .list-group-item:not(.bg-light) {
+    background-color: var(--bs-card-bg);
+  }
+  
+  .list-group-item.bg-light {
+    border-left-color: var(--bs-warning);
+  }
+  
+  [data-bs-theme="dark"] .list-group-item.bg-light {
+    background-color: rgba(255, 193, 7, 0.05) !important;
+  }
+  
+  /* Scrollbar styling */
+  .list-group-flush {
+    scrollbar-width: thin;
+  }
+  
+  .list-group-flush::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .list-group-flush::-webkit-scrollbar-thumb {
+    background-color: rgba(78, 84, 200, 0.3);
+    border-radius: 4px;
+  }
+  
+  [data-bs-theme="dark"] .list-group-flush::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+  
+  /* Empty state styling */
+  .empty-state-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: #6c757d;
+    background-color: rgba(108, 117, 125, 0.1);
+  }
+  
+  /* Badge styling */
+  .badge.bg-opacity-15 {
+    opacity: 0.85;
+  }
+</style>
 {% endblock %}

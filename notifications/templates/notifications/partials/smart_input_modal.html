@@ -1,13 +1,102 @@
-<form method="post" hx-post="{% url 'smart-reminder-modal' %}" hx-target="#modal-content" hx-swap="innerHTML">
+<form method="post" 
+      hx-post="{% url 'smart-reminder-modal' %}" 
+      hx-target="#modal-content" 
+      hx-swap="innerHTML"
+      hx-indicator=".generating-indicator">
   {% csrf_token %}
-  <div class="modal-header">
-    <h5 class="modal-title">🧠 Smart Reminder Assistant</h5>
-    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+  <div class="modal-header border-0">
+    <div class="w-100">
+      <h5 class="modal-title text-gradient d-flex align-items-center">
+        <i class="bi bi-magic me-2"></i> Smart Reminder Assistant
+      </h5>
+      <p class="text-muted small mb-0">Describe your reminder in natural language</p>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
   </div>
-  <div class="modal-body">
-    <textarea name="input" class="form-control" placeholder="e.g., Remind me to take medicine every night at 9 PM in a gentle tone"></textarea>
+  <div class="modal-body py-3">
+    <div class="form-floating">
+      <textarea name="input" class="form-control" 
+                placeholder="e.g., Remind me to take medicine every night at 9 PM in a gentle tone"
+                style="height: 120px"></textarea>
+      <label>Describe your reminder...</label>
+    </div>
+    <div class="d-flex align-items-center mt-2">
+      <i class="bi bi-lightbulb text-warning me-2"></i>
+      <small class="text-muted">e.g, "Remind me to take medicine every night at 9 PM in a gentle tone"</small>
+    </div>
   </div>
-  <div class="modal-footer">
-    <button type="submit" class="btn btn-primary">Generate</button>
+  <div class="modal-footer border-0 d-flex justify-content-between">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+      Cancel
+    </button>
+<button type="submit" class="btn btn-primary btn-glow position-relative">
+  <span class="generating-indicator htmx-indicator position-absolute">
+    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+    Generating...
+  </span>
+  <span class="generating-content">
+    <i class="bi bi-stars me-1"></i> Generate
+  </span>
+</button>
   </div>
 </form>
+
+<style>
+  /* Modal styling */
+  .modal-header .text-gradient {
+    background: linear-gradient(90deg, #4e54c8, #8f94fb);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  .modal-content {
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  
+  [data-bs-theme="dark"] .modal-content {
+    background-color: #2a2a2a;
+  }
+  
+  .generating-indicator {
+    opacity: 0;
+    display: flex;
+    align-items: center;
+    left: 50%;
+    transform: translateX(-50%);
+    transition: opacity 0.2s ease;
+  }
+  
+  .htmx-request .generating-indicator {
+    opacity: 1;
+  }
+  
+  .htmx-request .generating-content {
+    opacity: 0;
+  }
+  
+  .generating-content {
+    transition: opacity 0.2s ease;
+  }
+  
+  /* Textarea styling */
+  .form-control {
+    border-radius: 8px;
+    padding: 1rem;
+  }
+  
+  .form-floating label {
+    padding: 1rem;
+  }
+</style>
+
+<script>
+document.addEventListener('htmx:afterRequest', function(evt) {
+  if (evt.detail.elt.classList.contains('generating-indicator')) {
+    // Scroll to top when generation completes
+    document.querySelector('.modal-body').scrollTop = 0;
+  }
+});
+</script>

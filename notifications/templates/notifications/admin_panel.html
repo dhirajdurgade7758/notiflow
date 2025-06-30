@@ -1,75 +1,332 @@
 {% extends "notifications/base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-  <h2>🔒 Admin Reminder Monitor</h2>
-  <hr>
-
-  <div class="row mb-3">
-    {% for key, value in stats.items %}
-      <div class="col-md-2 mb-2">
-        <div class="card text-bg-light text-center p-2">
-          <strong>{{ key|capfirst }}:</strong><br> {{ value }}
-        </div>
-      </div>
-    {% endfor %}
+<div class="container-fluid px-4 py-3">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="fw-bold text-gradient mb-1">Admin Reminder Monitor</h2>
+      <p class="text-muted">Manage and monitor all system reminders</p>
+    </div>
+    <a href="{% url 'user_dashboard' %}" class="btn btn-secondary btn-glow">
+      <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+    </a>
   </div>
 
-  <form method="get" class="row mb-3">
-    <div class="col-md-3">
-      <input type="text" name="user" class="form-control" placeholder="Search by username" value="{{ user_filter }}">
+  <!-- Stats Cards with Icons -->
+  <div class="row g-4 mb-4">
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card stat-card h-100 hover-scale">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="icon-wrapper bg-primary bg-opacity-10 me-3">
+              <i class="bi bi-collection text-primary"></i>
+            </div>
+            <div>
+              <p class="text-muted mb-1 small">Total</p>
+              <h3 class="mb-0">{{ stats.total }}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="col-md-3">
-      <select name="status" class="form-select">
-        <option value="">-- Status --</option>
-        <option value="scheduled" {% if status_filter == 'scheduled' %}selected{% endif %}>Scheduled</option>
-        <option value="sent" {% if status_filter == 'sent' %}selected{% endif %}>Sent</option>
-        <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>Failed</option>
-        <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
-      </select>
+    
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card stat-card h-100 hover-scale">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="icon-wrapper bg-warning bg-opacity-10 me-3">
+              <i class="bi bi-clock text-warning"></i>
+            </div>
+            <div>
+              <p class="text-muted mb-1 small">Scheduled</p>
+              <h3 class="mb-0">{{ stats.scheduled }}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="col-md-2">
-      <button class="btn btn-primary" type="submit">Filter</button>
+    
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card stat-card h-100 hover-scale">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="icon-wrapper bg-success bg-opacity-10 me-3">
+              <i class="bi bi-check-circle text-success"></i>
+            </div>
+            <div>
+              <p class="text-muted mb-1 small">Sent</p>
+              <h3 class="mb-0">{{ stats.sent }}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-  </form>
+    
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card stat-card h-100 hover-scale">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="icon-wrapper bg-danger bg-opacity-10 me-3">
+              <i class="bi bi-exclamation-triangle text-danger"></i>
+            </div>
+            <div>
+              <p class="text-muted mb-1 small">Failed</p>
+              <h3 class="mb-0">{{ stats.failed }}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card stat-card h-100 hover-scale">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="icon-wrapper bg-secondary bg-opacity-10 me-3">
+              <i class="bi bi-x-circle text-secondary"></i>
+            </div>
+            <div>
+              <p class="text-muted mb-1 small">Cancelled</p>
+              <h3 class="mb-0">{{ stats.cancelled }}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-xl-2 col-md-4 col-6">
+      <div class="card stat-card h-100 hover-scale">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="icon-wrapper bg-info bg-opacity-10 me-3">
+              <i class="bi bi-arrow-repeat text-info"></i>
+            </div>
+            <div>
+              <p class="text-muted mb-1 small">Recurring</p>
+              <h3 class="mb-0">{{ stats.recurring }}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <table class="table table-bordered table-striped">
-    <thead>
-      <tr>
-        <th>User</th>
-        <th>Title</th>
-        <th>Status</th>
-        <th>Repeat</th>
-        <th>Notify</th>
-        <th>Send At</th>
-        <th>Failures</th>
+  <!-- Rest of your existing content (filter form and table) -->
+  <!-- Filter Form -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <form method="get" class="row g-3">
+        <div class="col-md-4">
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" name="user" class="form-control" placeholder="Search by username" value="{{ user_filter }}">
+          </div>
+        </div>
+        <div class="col-md-4">
+          <select name="status" class="form-select">
+            <option value="">All Statuses</option>
+            <option value="scheduled" {% if status_filter == 'scheduled' %}selected{% endif %}>Scheduled</option>
+            <option value="sent" {% if status_filter == 'sent' %}selected{% endif %}>Sent</option>
+            <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>Failed</option>
+            <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <button class="btn btn-primary btn-glow w-100" type="submit">
+            <i class="bi bi-funnel me-1"></i> Filter
+          </button>
+        </div>
+        <div class="col-md-2">
+          <a href="." class="btn btn-outline-secondary w-100">
+            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
 
-      </tr>
-    </thead>
-    <tbody>
-      {% for r in reminders %}
-      <tr>
-        <td>{{ r.user.username }}</td>
-        <td>{{ r.title }}</td>
-        <td><span class="badge bg-{{ r.status|yesno:'success,danger,secondary,warning' }}">{{ r.status }}</span></td>
-        <td>{{ r.get_repeat_display }}</td>
-        <td>{{ r.get_notify_type_display }}</td>
-        <td>{{ r.send_at|date:"Y-m-d H:i" }}</td>
-        <td>
-  {% if r.status == 'failed' and r.failure_logs.exists %}
-    <ul class="list-unstyled">
-      {% for log in r.failure_logs.all %}
-        <li><code>{{ log.timestamp|date:"Y-m-d H:i" }}</code><br>{{ log.error_message|truncatechars:80 }}</li>
-      {% endfor %}
-    </ul>
+  <!-- Reminders Table -->
+  {% if reminders %}
+    <div class="card shadow-sm">
+      <div class="card-body p-0">
+         <div class="table-responsive" style="max-height: calc(100vh - 360px); overflow-y: auto;">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light sticky-top" style="z-index: 1;">
+              <tr>
+                <th class="ps-4">User</th>
+                <th>Title</th>
+                <th>Status</th>
+                <th>Repeat</th>
+                <th>Notify</th>
+                <th>Send At</th>
+                <th class="pe-4">Failures</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in reminders %}
+              <tr class="hover-scale">
+                <td class="ps-4 fw-semibold">{{ r.user.username }}</td>
+                <td>{{ r.title }}</td>
+                <td>
+                  <span class="badge bg-{% if r.status == 'sent' %}success{% elif r.status == 'failed' %}danger{% elif r.status == 'scheduled' %}warning{% else %}secondary{% endif %}-soft">
+                    {{ r.status|capfirst }}
+                  </span>
+                </td>
+                <td>
+                  {% if r.repeat != 'none' %}
+                    <span class="badge bg-purple-soft">
+                      <i class="bi bi-arrow-repeat me-1"></i>{{ r.get_repeat_display }}
+                    </span>
+                  {% else %}
+                    <span class="text-muted">None</span>
+                  </td>
+                  {% endif %}
+                <td>
+                  <span class="badge bg-info bg-opacity-10 text-info">
+                    {{ r.get_notify_type_display }}
+                  </span>
+                </td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <i class="bi bi-calendar me-2 text-primary"></i>
+                    {{ r.send_at|date:"M d, Y H:i" }}
+                  </div>
+                </td>
+                <td class="pe-4">
+                  {% if r.status == 'failed' and r.failure_logs.exists %}
+                    <div class="failure-log">
+                      <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="collapse" 
+                              data-bs-target="#failures-{{ r.id }}" aria-expanded="false">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        {{ r.failure_logs.count }} error(s)
+                      </button>
+                      <div class="collapse mt-2" id="failures-{{ r.id }}">
+                        <div class="card card-body bg-light bg-opacity-10 small">
+                          {% for log in r.failure_logs.all %}
+                            <div class="mb-2">
+                              <code>{{ log.timestamp|date:"Y-m-d H:i" }}</code>
+                              <div class="text-danger">{{ log.error_message|truncatechars:100 }}</div>
+                            </div>
+                            {% if not forloop.last %}<hr>{% endif %}
+                          {% endfor %}
+                        </div>
+                      </div>
+                    </div>
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   {% else %}
-    <span class="text-muted">—</span>
+    <div class="card shadow-sm">
+      <div class="card-body text-center py-5">
+        <div class="empty-state-icon mb-3">
+          <i class="bi bi-bell-slash" style="font-size: 2.5rem;"></i>
+        </div>
+        <h4 class="mb-2">No reminders found</h4>
+        <p class="text-muted mb-4">Try adjusting your search filters</p>
+      </div>
+    </div>
   {% endif %}
-</td>
-
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
 </div>
+
+<style>
+  /* Stats Cards */
+  .stat-card {
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, #4e54c8, #8f94fb);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+  }
+  
+  .stat-card:hover::after {
+    transform: scaleX(1);
+  }
+  
+  .icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Failure Logs */
+  .failure-log .card-body {
+    font-size: 0.85rem;
+    padding: 0.75rem;
+  }
+  
+  [data-bs-theme="dark"] .failure-log .card-body {
+    background-color: rgba(255, 0, 0, 0.05) !important;
+  }
+  
+  /* Table Styles */
+   /* Custom styles for the table */
+  .table {
+    --bs-table-bg: var(--bs-card-bg);
+    --bs-table-striped-bg: rgba(78, 84, 200, 0.02);
+    --bs-table-hover-bg: rgba(78, 84, 200, 0.05);
+  }
+  
+[data-bs-theme="dark"] .table-light {
+  --bs-table-bg: #2d2d2d;  /* Slightly darker than card bg */
+  --bs-table-color: var(--bs-heading-color);
+  border-bottom-color: #444;
+}
+  /* Add this to your style section */
+.table-light {
+  --bs-table-bg: var(--bs-card-bg);
+  --bs-table-color: var(--bs-heading-color);
+  background-color: var(--bs-table-bg);
+  color: var(--bs-table-color);
+}
+  .table th {
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    color: var(--bs-text-muted);
+  }
+  
+  /* Make the header stick when scrolling */
+  .sticky-top {
+    position: sticky;
+    top: 0;
+    background-color: inherit;
+  }
+  
+  /* Scrollbar styling */
+  .table-responsive::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .table-responsive::-webkit-scrollbar-thumb {
+    background-color: rgba(78, 84, 200, 0.3);
+    border-radius: 4px;
+  }
+  
+  [data-bs-theme="dark"] .table-responsive::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+</style>
 {% endblock %}

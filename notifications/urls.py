@@ -12,7 +12,6 @@ urlpatterns = [
     path('alerts/unread/<int:pk>/', views.mark_as_unread, name='mark_as_unread'),
     path('history/', views.reminder_history, name='reminder_history'),
     path('admin-reminders/', views.admin_reminder_monitor, name='admin_reminders'),
-    path('smart-reminder/', views.smart_reminder_view, name='smart_reminder'),
     path('smart-reminder/modal/', views.smart_reminder_view, name='smart-reminder-modal'),
 
 

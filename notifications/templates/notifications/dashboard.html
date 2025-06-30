@@ -1,53 +1,255 @@
 {% extends "notifications/base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-  <h2>📊 Dashboard</h2>
-  <hr>
-
-  <div class="row mb-4">
-    <div class="col-md-2"><div class="card text-bg-primary p-3">Total: {{ stats.total }}</div></div>
-    <div class="col-md-2"><div class="card text-bg-success p-3">Sent: {{ stats.sent }}</div></div>
-    <div class="col-md-2"><div class="card text-bg-warning p-3">Scheduled: {{ stats.scheduled }}</div></div>
-    <div class="col-md-2"><div class="card text-bg-danger p-3">Failed: {{ stats.failed }}</div></div>
-    <div class="col-md-2"><div class="card text-bg-secondary p-3">Cancelled: {{ stats.cancelled }}</div></div>
-  </div>
-
-  <div class="row">
-    <div class="col-md-6">
-      <h5>⏰ Upcoming Reminders</h5>
-      {% if reminders %}
-        <ul class="list-group">
-          {% for r in reminders %}
-            <li class="list-group-item">
-              <strong>{{ r.title }}</strong> - {{ r.send_at|date:"M d, H:i" }}
-              <br><small>Status: {{ r.status|capfirst }}</small>
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <p class="text-muted">No upcoming reminders.</p>
-      {% endif %}
-    </div>
-
-    <div class="col-md-6">
-      <h5>🔔 Recent Alerts</h5>
-      {% if alerts %}
-        <ul class="list-group">
-          {% for a in alerts %}
-            <li class="list-group-item">
-              <strong>{{ a.title }}</strong><br>
-              {{ a.message|truncatechars:60 }}
-              <br><small class="text-muted">{{ a.created_at|timesince }} ago</small>
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <p class="text-muted">No recent alerts.</p>
-      {% endif %}
+<div class="container-fluid px-4" data-bs-theme="auto" style="height: 100vh; ">
+  <!-- Quick Actions Sidebar -->
+  <div class="quick-actions-sidebar position-fixed start-0 top-4 h-100 shadow-sm" style="width: 80px; z-index: 100;">
+    <div class="d-flex flex-column align-items-center pt-4">
+      <a href="{% url 'reminder_list' %}" class="btn btn-action mb-3" data-bs-toggle="tooltip" data-bs-placement="right" title="All Reminders">
+        <i class="bi bi-list-task fs-5"></i>
+      </a>
+      <a href="{% url 'reminder_history' %}" class="btn btn-action mb-3" data-bs-toggle="tooltip" data-bs-placement="right" title="History">
+        <i class="bi bi-clock-history fs-5"></i>
+      </a>
+      <a href="{% url 'inapp_notifications' %}" class="btn btn-action mb-3" data-bs-toggle="tooltip" data-bs-placement="right" title="All Alerts">
+        <i class="bi bi-bell fs-5"></i>
+      </a>
+      <a href="#" class="btn btn-action mb-3" data-bs-toggle="tooltip" data-bs-placement="right" title="Settings">
+        <i class="bi bi-gear fs-5"></i>
+      </a>
+      <a href="#" class="btn btn-action mb-3" data-bs-toggle="tooltip" data-bs-placement="right" title="Analytics">
+        <i class="bi bi-graph-up fs-5"></i>
+      </a>
+      <a href="#" class="btn btn-action mb-3" data-bs-toggle="tooltip" data-bs-placement="right" title="Team">
+        <i class="bi bi-people fs-5"></i>
+      </a>
     </div>
   </div>
-  <!-- Modal Shell -->
+
+  <!-- Main Content Area -->
+  <div class="main-content" style="margin-left: 80px; height: 100%; overflow-y: auto; padding-bottom: 20px;">
+    <!-- Header -->
+    <header class="d-flex justify-content-between align-items-center mb-4 pt-3">
+      <div>
+        <h1 class="fw-bold mb-0 text-gradient">NotiFlow</h1>
+        <p class="text-muted">Intelligent Notification Management System</p>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary btn-glow" 
+                hx-get="{% url 'smart-reminder-modal' %}" 
+                hx-target="#modal-content" 
+                hx-trigger="click" 
+                hx-swap="innerHTML">
+          <i class="bi bi-magic me-1"></i> Smart Reminder
+        </button>
+        <a href="{% url 'create_reminder' %}" class="btn btn-success btn-glow">
+          <i class="bi bi-plus-circle me-1"></i> New
+        </a>
+        <!-- Theme Toggle in Header -->
+        <button class="btn btn-toggle-theme shadow-sm" id="themeToggle">
+        <i class="bi bi-sun-fill"></i>
+        <i class="bi bi-moon-fill d-none"></i>
+      </button>
+      </div>
+    </header>
+
+    <!-- Stats Cards with Animation -->
+    <div class="row mb-4 g-4 stats-cards">
+      <div class="col-xl-2 col-md-4 col-6">
+        <div class="card stat-card h-100 hover-scale" data-stat="total">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="icon-wrapper bg-primary bg-opacity-10 me-3">
+                <i class="bi bi-collection text-primary"></i>
+              </div>
+              <div>
+                <p class="text-muted mb-1 small">Total</p>
+                <h3 class="mb-0 counter" data-target="{{ stats.total }}">0</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-xl-2 col-md-4 col-6">
+        <div class="card stat-card h-100 hover-scale" data-stat="sent">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="icon-wrapper bg-success bg-opacity-10 me-3">
+                <i class="bi bi-check-circle text-success"></i>
+              </div>
+              <div>
+                <p class="text-muted mb-1 small">Sent</p>
+                <h3 class="mb-0 counter" data-target="{{ stats.sent }}">0</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-xl-2 col-md-4 col-6">
+        <div class="card stat-card h-100 hover-scale" data-stat="scheduled">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="icon-wrapper bg-warning bg-opacity-10 me-3">
+                <i class="bi bi-clock text-warning"></i>
+              </div>
+              <div>
+                <p class="text-muted mb-1 small">Scheduled</p>
+                <h3 class="mb-0 counter" data-target="{{ stats.scheduled }}">0</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-xl-2 col-md-4 col-6">
+        <div class="card stat-card h-100 hover-scale" data-stat="failed">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="icon-wrapper bg-danger bg-opacity-10 me-3">
+                <i class="bi bi-exclamation-triangle text-danger"></i>
+              </div>
+              <div>
+                <p class="text-muted mb-1 small">Failed</p>
+                <h3 class="mb-0 counter" data-target="{{ stats.failed }}">0</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-xl-2 col-md-4 col-6">
+        <div class="card stat-card h-100 hover-scale" data-stat="cancelled">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="icon-wrapper bg-secondary bg-opacity-10 me-3">
+                <i class="bi bi-x-circle text-secondary"></i>
+              </div>
+              <div>
+                <p class="text-muted mb-1 small">Cancelled</p>
+                <h3 class="mb-0 counter" data-target="{{ stats.cancelled }}">0</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-xl-2 col-md-4 col-6">
+        <div class="card stat-card h-100 hover-scale" data-stat="alerts">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="icon-wrapper bg-info bg-opacity-10 me-3">
+                <i class="bi bi-bell text-info"></i>
+              </div>
+              <div>
+                <p class="text-muted mb-1 small">Today's Alerts</p>
+                <h3 class="mb-0 counter" data-target="{{ alerts.count }}">0</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="row g-4">
+      <!-- Upcoming Reminders -->
+      <div class="col-lg-6">
+        <div class="card h-100 shadow-sm">
+          <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-clock me-2"></i>Upcoming Reminders</h5>
+            <a href="{% url 'reminder_list' %}" class="btn btn-sm btn-soft-primary">View All</a>
+          </div>
+          <div class="card-body pt-0">
+            {% if reminders %}
+              <div class="list-group list-group-flush reminder-list">
+                {% for r in reminders %}
+                  <div class="list-group-item border-0 px-0 py-3 reminder-item hover-scale">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div class="d-flex align-items-center">
+                        <div class="reminder-icon me-3">
+                          <div class="icon-circle bg-{% if r.status == 'sent' %}success{% elif r.status == 'failed' %}danger{% elif r.status == 'scheduled' %}warning{% else %}secondary{% endif %}-soft">
+                            <i class="bi bi-{% if r.status == 'sent' %}check{% elif r.status == 'failed' %}exclamation{% elif r.status == 'scheduled' %}clock{% else %}x{% endif %} text-{% if r.status == 'sent' %}success{% elif r.status == 'failed' %}danger{% elif r.status == 'scheduled' %}warning{% else %}secondary{% endif %}"></i>
+                          </div>
+                        </div>
+                        <div>
+                          <h6 class="mb-1">{{ r.title }}</h6>
+                          <div class="d-flex align-items-center">
+                            <small class="text-muted me-2">
+                              <i class="bi bi-calendar me-1"></i>{{ r.send_at|date:"M d, H:i" }}
+                            </small>
+                            <span class="badge bg-{% if r.status == 'sent' %}success{% elif r.status == 'failed' %}danger{% elif r.status == 'scheduled' %}warning{% else %}secondary{% endif %}-soft">
+                              {{ r.status|capfirst }}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <button class="btn btn-sm btn-soft-primary btn-pill">View</button>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="empty-state">
+                <div class="empty-state-icon">
+                  <i class="bi bi-clock"></i>
+                </div>
+                <h5>No Upcoming Reminders</h5>
+                <p class="text-muted">You don't have any reminders scheduled yet</p>
+                <a href="{% url 'create_reminder' %}" class="btn btn-primary mt-2">Create Reminder</a>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Recent Alerts -->
+      <div class="col-lg-6">
+        <div class="card h-100 shadow-sm">
+          <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-bell me-2"></i>Recent Alerts</h5>
+            <a href="{% url 'inapp_notifications' %}" class="btn btn-sm btn-soft-primary">View All</a>
+          </div>
+          <div class="card-body pt-0">
+            {% if alerts %}
+              <div class="list-group list-group-flush alert-list">
+                {% for a in alerts %}
+                  <div class="list-group-item border-0 px-0 py-3 alert-item hover-scale">
+                    <div class="d-flex">
+                      <div class="alert-icon me-3">
+                        <div class="icon-circle bg-{% if a.priority == 'high' %}danger{% elif a.priority == 'medium' %}warning{% else %}info{% endif %}-soft">
+                          <i class="bi bi-{% if a.priority == 'high' %}exclamation-lg{% elif a.priority == 'medium' %}exclamation{% else %}info-circle{% endif %} text-{% if a.priority == 'high' %}danger{% elif a.priority == 'medium' %}warning{% else %}info{% endif %}"></i>
+                        </div>
+                      </div>
+                      <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start">
+                          <h6 class="mb-1">{{ a.title }}</h6>
+                          <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ a.created_at|timesince }} ago</small>
+                        </div>
+                        <p class="small text-muted mb-0">{{ a.message|truncatechars:80 }}</p>
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="empty-state">
+                <div class="empty-state-icon">
+                  <i class="bi bi-bell"></i>
+                </div>
+                <h5>No Recent Alerts</h5>
+                <p class="text-muted">Your alert inbox is currently empty</p>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Shell -->
 <div id="modal" class="modal fade" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content" id="modal-content">
@@ -56,24 +258,266 @@
   </div>
 </div>
 
-  <button class="btn btn-primary" 
-        hx-get="{% url 'smart-reminder-modal' %}" 
-        hx-target="#modal-content" 
-        hx-trigger="click" 
-        hx-swap="innerHTML">
-    🧠 Create Smart Reminder
-</button>
+<style>
+  /* Custom CSS for enhanced UI */
+:root {
+  --bs-body-bg: #f8f9fa;
+  --bs-card-bg: #fff;
+  --bs-card-border-color: rgba(0,0,0,.125);
+  --sidebar-bg: #ffffff;
+  --sidebar-border: rgba(0,0,0,0.1);
+  --sidebar-icon-color: #495057;
+  --sidebar-icon-hover: #4e54c8;
+}
 
+[data-bs-theme="dark"] {
+  --bs-body-bg: #1a1a1a;
+  --bs-card-bg: #2a2a2a;
+  --bs-card-border-color: #444;
+  --bs-body-color: #e0e0e0;
+  --bs-heading-color: #fff;
+  --bs-text-muted: #aaa;
+  --sidebar-bg: #2a2a2a;
+  --sidebar-border: #444;
+  --sidebar-icon-color: #e0e0e0;
+  --sidebar-icon-hover: #8f94fb;
+}
+  
+  body {
+    overflow: hidden;
+  }
+  
+  .text-gradient {
+    background: linear-gradient(90deg, #4e54c8, #8f94fb);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block;
+  }
+  
+  .btn-glow {
+    transition: all 0.3s ease;
+    box-shadow: 0 0 10px rgba(78, 84, 200, 0.3);
+  }
+  
+  .btn-glow:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(78, 84, 200, 0.4);
+  }
+  
+  .hover-scale {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .hover-scale:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
+  }
+  
+  .stat-card {
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    transition: all 0.3s ease;
+  }
+  
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, #4e54c8, #8f94fb);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+  }
+  
+  .stat-card:hover::after {
+    transform: scaleX(1);
+  }
+  
+  .icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .icon-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: 2rem 0;
+  }
+  
+  .empty-state-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: #6c757d;
+    background-color: rgba(108, 117, 125, 0.1);
+  }
+  
+  .btn-soft-primary {
+    color: #4e54c8;
+    background-color: rgba(78, 84, 200, 0.1);
+    border-color: transparent;
+  }
+  
+  .btn-soft-primary:hover {
+    color: #fff;
+    background-color: #4e54c8;
+  }
+  
+  .btn-pill {
+    border-radius: 50px;
+  }
+  
+  .btn-toggle-theme {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    color: var(--bs-body-color);
+  }
+  
+  .reminder-list .list-group-item, .alert-list .list-group-item {
+    transition: background-color 0.2s ease;
+  }
+  
+  /* Quick Actions Sidebar */
+.quick-actions-sidebar {
+  background-color: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+}
 
-  <div class="mt-4">
-    <a href="{% url 'create_reminder' %}" class="btn btn-primary">+ Create New Reminder</a>
-    
-    <a href="{% url 'reminder_list' %}" class="btn btn-secondary">📋 View All Reminders</a>
-    <a href="{% url 'reminder_history' %}" class="btn btn-outline-dark">📜 View Reminder History</a>
-    <a href="{% url 'inapp_notifications' %}" class="btn btn-info">🔔 View All Alerts</a>
-  </div>
-</div>
+.btn-action {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sidebar-icon-color);
+  background-color: transparent;
+  transition: all 0.2s ease;
+}
+
+.btn-action:hover {
+  background-color: rgba(78, 84, 200, 0.1);
+  color: var(--sidebar-icon-hover);
+  transform: translateY(-2px);
+}
+  
+  /* Custom scrollbar */
+  .main-content::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .main-content::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .main-content::-webkit-scrollbar-thumb {
+    background-color: rgba(78, 84, 200, 0.3);
+    border-radius: 3px;
+  }
+  
+  [data-bs-theme="dark"] .main-content::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+</style>
+
 <script>
+  {% comment %} // Theme toggle functionality
+  document.addEventListener('DOMContentLoaded', function() {
+    const themeToggle = document.getElementById('themeToggle');
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    
+    // Set initial theme
+    document.documentElement.setAttribute('data-bs-theme', savedTheme);
+    updateThemeIcon(savedTheme);
+    
+    // Toggle theme
+    themeToggle.addEventListener('click', function() {
+      const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      
+      document.documentElement.setAttribute('data-bs-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      updateThemeIcon(newTheme);
+    });
+    
+    function updateThemeIcon(theme) {
+      const sunIcon = themeToggle.querySelector('.bi-sun-fill');
+      const moonIcon = themeToggle.querySelector('.bi-moon-fill');
+      
+      if (theme === 'dark') {
+        sunIcon.classList.add('d-none');
+        moonIcon.classList.remove('d-none');
+      } else {
+        sunIcon.classList.remove('d-none');
+        moonIcon.classList.add('d-none');
+      }
+    }
+    
+    // Counter animation for stats
+    const counters = document.querySelectorAll('.counter');
+    const speed = 200;
+    
+    counters.forEach(counter => {
+      const target = +counter.getAttribute('data-target');
+      const count = +counter.innerText;
+      const increment = target / speed;
+      
+      if (count < target) {
+        counter.innerText = Math.ceil(count + increment);
+        setTimeout(updateCounter, 1);
+      } else {
+        counter.innerText = target;
+      }
+      
+      function updateCounter() {
+        const count = +counter.innerText;
+        const increment = target / speed;
+        
+        if (count < target) {
+          counter.innerText = Math.ceil(count + increment);
+          setTimeout(updateCounter, 1);
+        } else {
+          counter.innerText = target;
+        }
+      }
+    });
+    
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+  }); {% endcomment %}
+  
   document.body.addEventListener('htmx:afterSwap', (e) => {
     if (e.detail.target.id === "modal-content") {
       const modal = new bootstrap.Modal(document.getElementById('modal'));
@@ -81,5 +525,4 @@
     }
   });
 </script>
-
 {% endblock %}

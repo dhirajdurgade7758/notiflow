@@ -1,11 +1,89 @@
 {% for alert in alerts %}
-<div class="toast show mb-2" role="alert" aria-live="assertive" aria-atomic="true">
-  <div class="toast-header">
-    <strong class="me-auto">{{ alert.title }}</strong>
-    <small class="text-muted">just now</small>
+<div class="toast show mb-2 fade" role="alert" aria-live="assertive" aria-atomic="true" 
+     style="border-left: 4px solid {% if alert.priority == 'high' %}var(--bs-danger){% elif alert.priority == 'medium' %}var(--bs-warning){% else %}var(--bs-info){% endif %};">
+  <div class="toast-header bg-{% if alert.priority == 'high' %}danger{% elif alert.priority == 'medium' %}warning{% else %}info{% endif %}-subtle">
+    <div class="d-flex align-items-center">
+      <i class="bi bi-{% if alert.priority == 'high' %}exclamation-triangle-fill{% elif alert.priority == 'medium' %}exclamation-circle-fill{% else %}info-circle-fill{% endif %} 
+         text-{% if alert.priority == 'high' %}danger{% elif alert.priority == 'medium' %}warning{% else %}info{% endif %} me-2"></i>
+      <strong class="me-auto">{{ alert.title }}</strong>
+    </div>
+    <div>
+      <small class="text-muted me-2">{{ alert.created_at|timesince }} ago</small>
+      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
   </div>
   <div class="toast-body">
-    {{ alert.message }}
+    <div class="d-flex align-items-start">
+      <div class="flex-grow-1">
+        {{ alert.message }}
+      </div>
+      <a href="{% url 'mark_alert_read' alert.id %}" class="btn btn-sm btn-{% if alert.priority == 'high' %}outline-danger{% elif alert.priority == 'medium' %}outline-warning{% else %}outline-info{% endif %} ms-3">
+        Mark Read
+      </a>
+    </div>
   </div>
 </div>
 {% endfor %}
+
+<style>
+  /* Toast notification styling */
+  .toast {
+    width: 350px;
+    border-radius: 8px;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--bs-border-color);
+    overflow: hidden;
+  }
+  
+  .toast-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--bs-border-color);
+  }
+  
+  .toast-body {
+    padding: 1rem;
+    background-color: var(--bs-body-bg);
+  }
+  
+  [data-bs-theme="dark"] .toast {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.3);
+  }
+  
+  /* Priority colors */
+  .bg-danger-subtle {
+    background-color: rgba(var(--bs-danger-rgb), 0.1);
+  }
+  
+  .bg-warning-subtle {
+    background-color: rgba(var(--bs-warning-rgb), 0.1);
+  }
+  
+  .bg-info-subtle {
+    background-color: rgba(var(--bs-info-rgb), 0.1);
+  }
+  
+  [data-bs-theme="dark"] .bg-danger-subtle {
+    background-color: rgba(var(--bs-danger-rgb), 0.2);
+  }
+  
+  [data-bs-theme="dark"] .bg-warning-subtle {
+    background-color: rgba(var(--bs-warning-rgb), 0.2);
+  }
+  
+  [data-bs-theme="dark"] .bg-info-subtle {
+    background-color: rgba(var(--bs-info-rgb), 0.2);
+  }
+</style>
+
+<script>
+  // Auto-dismiss toasts after 5 seconds
+  document.addEventListener('DOMContentLoaded', function() {
+    const toasts = document.querySelectorAll('.toast');
+    toasts.forEach(toast => {
+      setTimeout(() => {
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.hide();
+      }, 5000);
+    });
+  });
+</script>
