@@ -7,7 +7,7 @@ from django.template.loader import render_to_string
 
 from .forms import ReminderForm
 from .models import *
-from .tasks import schedule_reminder_task       
+from .tasks import schedule_reminder_task
 
 
 from django.db.models import Count, Q
@@ -30,7 +30,7 @@ def user_dashboard(request):
         user=user,
         is_active=True,
         send_at__gte=timezone.now()
-    ).order_by('send_at')[:5]
+    ).order_by('send_at')[:3]
 
     stats = {
         'total': Reminder.objects.filter(user=user).count(),
@@ -83,6 +83,7 @@ def create_reminder(request):
 def reminder_list(request):
     reminders = Reminder.objects.filter(user=request.user).order_by('-send_at')
     return render(request, 'notifications/reminder_list.html', {'reminders': reminders})
+
 
 @login_required
 def reminder_history(request):
@@ -204,7 +205,9 @@ from django.http import HttpResponse
 def smart_reminder_view(request):
     if request.method == 'POST' and request.POST.get('input'):
         raw_input = request.POST.get('input')
+        print(f"Received raw input: {raw_input}")
         ai_data = parse_natural_reminder(raw_input)
+        print(f"Parsed AI data: {ai_data}")
 
         # ⏰ Fix parsed time
         raw_time = ai_data.get('datetime')

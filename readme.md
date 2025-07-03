@@ -2,8 +2,6 @@
 
 Notiflow is a **production-ready Django project** that combines real-time notifications, scheduled tasks, and AI capabilities. It helps users stay productive by automating reminders via **email**, **in-app**, and **SMS**, powered by **Celery, Redis**, and **LLMs (LLaMA3 via Groq)**.
 
-![Notiflow Banner](https://github.com/yourusername/notiflow/assets/banner.png)
-
 ---
 
 ## 🚀 Features
@@ -55,16 +53,23 @@ Notiflow is a **production-ready Django project** that combines real-time notifi
 
 ## 📸 Demo Screenshots
 
-| Reminder Form (AI Smart)      | In-App Notification                    |
-| ----------------------------- | -------------------------------------- |
-| ![form](screenshots/form.png) | ![notification](screenshots/toast.png) |
+| Screenshot                                                  | Description                                                          |
+| ----------------------------------------------------------- | -------------------------------------------------------------------- |
+| ![User Dashboard](screenshots/user_dashboard.png)           | 👤 **User Dashboard** – Overview of reminders, alerts, and activity  |
+| ![Admin Dashboard](screenshots/admin_dashboard.png)         | 🛠️ **Admin Panel** – Monitor all user reminders and failures         |
+| ![Smart Reminder](screenshots/smart_reminder.png)           | 🤖 **AI Reminder Creation** – Natural language input + LLM rewriting |
+| ![Reminder List](screenshots/reminder_list.png)             | 📋 **Reminder List View** – Upcoming and past reminders              |
+| ![In-App Toasts](screenshots/inapp_toast.png)               | 🔔 **In-App Toasts** – Real-time alerts via WebSocket & HTMX         |
+| ![In-App Notification](screenshots/inapp_notifications.png) | 🔔 **In-App Notification** – list of all inapp notifications         |
+| ![Reminder History](screenshots/reminder_history.png)       | 📜 **History Tab** – Log of all completed and failed reminders       |
+| ![Reminder Form](screenshots/reminder_form.png)             | ✍️ **Manual Reminder Form** – Traditional form-based entry           |
 
 ---
 
 ## ⚙️ Project Setup (Development)
 
 ```bash
-git clone https://github.com/yourusername/notiflow.git
+git clone https://github.com/dhirajdurgade7758/notiflow.git
 cd notiflow
 
 # Setup virtualenv
@@ -141,13 +146,7 @@ GROQ_API_KEY=sk-...
 
 > **Dhiraj Durgade**
 > Python • Django • Full Stack Dev
-> [LinkedIn](https://linkedin.com/in/dhiraj-durgade) • [GitHub](https://github.com/yourusername)
-
----
-
-## 📃 License
-
-This project is licensed under the [MIT License](LICENSE).
+> [LinkedIn](https://www.linkedin.com/in/dhiraj-durgade/) • [GitHub](https://github.com/dhirajdurgade7758)
 
 ---
 
