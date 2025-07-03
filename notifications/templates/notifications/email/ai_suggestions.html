@@ -1,0 +1,13 @@
+<h2>🧠 Smart Reminder Suggestions</h2>
+<p>Hello {{ user.first_name|default:user.username }},</p>
+
+
+<p>Based on your recent activity, here are a few suggestions:</p>
+
+<ul>
+  {% for item in suggestions %}
+    <li><strong>{{ item.title }}</strong><br>{{ item.message }}</li>
+  {% endfor %}
+</ul>
+
+<p>You can convert any of them to a real reminder with one click inside your dashboard!</p>

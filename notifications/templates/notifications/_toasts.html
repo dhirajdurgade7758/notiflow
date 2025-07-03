@@ -7,17 +7,18 @@
          text-{% if alert.priority == 'high' %}danger{% elif alert.priority == 'medium' %}warning{% else %}info{% endif %} me-2"></i>
       <strong class="me-auto">{{ alert.title }}</strong>
     </div>
-    <div>
-      <small class="text-muted me-2">{{ alert.created_at|timesince }} ago</small>
-      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-    </div>
+    <div class="d-flex align-items-center ms-auto gap-2">
+  <small class="text-muted">{{ alert.created_at|timesince }} ago</small>
+  <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+</div>
+
   </div>
   <div class="toast-body">
     <div class="d-flex align-items-start">
       <div class="flex-grow-1">
         {{ alert.message }}
       </div>
-      <a href="{% url 'mark_alert_read' alert.id %}" class="btn btn-sm btn-{% if alert.priority == 'high' %}outline-danger{% elif alert.priority == 'medium' %}outline-warning{% else %}outline-info{% endif %} ms-3">
+      <a href="{% url 'mark_as_read' alert.id %}" class="btn btn-sm btn-{% if alert.priority == 'high' %}outline-danger{% elif alert.priority == 'medium' %}outline-warning{% else %}outline-info{% endif %} ms-3">
         Mark Read
       </a>
     </div>

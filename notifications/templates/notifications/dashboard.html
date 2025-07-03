@@ -3,7 +3,7 @@
 {% block content %}
 <div class="container-fluid px-4" data-bs-theme="auto" style="height: 100vh; ">
   <!-- Quick Actions Sidebar -->
-  <div class="quick-actions-sidebar position-fixed start-0 top-4 h-100 shadow-sm" style="width: 80px; z-index: 100;">
+  <div class="quick-actions-sidebar position-fixed start-0 top-4 h-100 shadow-sm " style="width: 80px; z-index: 10;">
     <div class="d-flex flex-column align-items-center pt-4">
       <a href="{% url 'reminder_list' %}" class="btn btn-action mb-3" data-bs-toggle="tooltip" data-bs-placement="right" title="All Reminders">
         <i class="bi bi-list-task fs-5"></i>
@@ -450,7 +450,7 @@
 </style>
 
 <script>
-  {% comment %} // Theme toggle functionality
+   // Theme toggle functionality
   document.addEventListener('DOMContentLoaded', function() {
     const themeToggle = document.getElementById('themeToggle');
     const savedTheme = localStorage.getItem('theme') || 'light';
@@ -516,7 +516,7 @@
     tooltipTriggerList.map(function (tooltipTriggerEl) {
       return new bootstrap.Tooltip(tooltipTriggerEl);
     });
-  }); {% endcomment %}
+  });
   
   document.body.addEventListener('htmx:afterSwap', (e) => {
     if (e.detail.target.id === "modal-content") {

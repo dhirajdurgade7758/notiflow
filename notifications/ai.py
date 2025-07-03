@@ -80,18 +80,34 @@ def rewrite_message_tone(message, tone="friendly"):
     return response.json()["choices"][0]["message"]["content"].strip()
 
 
-def transcribe_audio(file_path):
-    files = {
-        'file': open(file_path, 'rb')
-    }
-    data = {
-        "model": "whisper-1"
-    }
-    headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}"
+def generate_ai_prompt(user, reminders):
+    reminder_data = "\n".join(
+        f"- {r.title} at {r.send_at.strftime('%A %I:%M %p')} ({r.notify_type})"
+        for r in reminders.order_by('-send_at')[:10]
+    )
+
+    return (
+        f"This user has set the following reminders:\n"
+        f"{reminder_data}\n\n"
+        "Based on their activity, suggest 2–3 new helpful reminders to improve productivity or wellness. "
+        "Return a JSON list with items having title, message, and datetime (optional)."
+    )
+
+
+def call_llm_api(prompt):
+    payload = {
+        "model": MODEL,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.7
     }
 
-    response = requests.post("https://api.groq.com/openai/v1/audio/transcriptions", data=data, files=files, headers=headers)
+    response = requests.post(GROQ_API_URL, headers=HEADERS, data=json.dumps(payload))
     response.raise_for_status()
+    content = response.json()["choices"][0]["message"]["content"]
 
-    return response.json()['text']
+    match = re.search(r"\[.*\]", content, re.DOTALL)
+    if not match:
+        raise ValueError("No JSON list found.")
+
+    suggestions = match.group(0)
+    return json.loads(suggestions)

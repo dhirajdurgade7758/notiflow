@@ -1,0 +1,22 @@
+<h2>📊 Weekly Reminder Report</h2>
+<p>Hello {{ user.first_name or user.username }},</p>
+
+<p>Here’s your reminder activity for the last 7 days:</p>
+
+<ul>
+  <li><strong>Total:</strong> {{ total }}</li>
+  <li><strong>Sent:</strong> {{ sent }}</li>
+  <li><strong>Failed:</strong> {{ failed }}</li>
+  <li><strong>Most Used Channel:</strong> {{ most_used|title }}</li>
+</ul>
+
+{% if upcoming %}
+<p>🔔 <strong>Upcoming Reminders:</strong></p>
+<ul>
+  {% for rem in upcoming %}
+  <li><strong>{{ rem.title }}</strong> – {{ rem.send_at|date:"D, M j – H:i" }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<p>Keep your goals on track! 💪</p>

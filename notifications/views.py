@@ -12,11 +12,20 @@ from .tasks import schedule_reminder_task
 
 from django.db.models import Count, Q
 
+from django.utils import timezone
+from django.db.models import Q
+
 @login_required
 def user_dashboard(request):
     user = request.user
 
-    recent_alerts = InAppNotification.objects.filter(user=user).order_by('-created_at')[:5]
+    # Get today's alerts for counter (for correct alert count)
+    today = timezone.now().date()
+    todays_alerts = InAppNotification.objects.filter(user=user, created_at__date=today)
+
+    # For preview purposes, show only 5 recent alerts
+    recent_alerts = todays_alerts.order_by('-created_at')[:5]
+
     upcoming_reminders = Reminder.objects.filter(
         user=user,
         is_active=True,
@@ -30,12 +39,14 @@ def user_dashboard(request):
         'failed': Reminder.objects.filter(user=user, status='failed').count(),
         'cancelled': Reminder.objects.filter(user=user, status='cancelled').count(),
     }
+    print(f"Dashboard stats for {user.username}: {stats}")
 
     return render(request, 'notifications/dashboard.html', {
-        'alerts': recent_alerts,
+        'alerts': todays_alerts,            # for alert counter and list
         'reminders': upcoming_reminders,
         'stats': stats
     })
+
 
 
 @login_required

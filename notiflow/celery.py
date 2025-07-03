@@ -6,3 +6,4 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'notiflow.settings')
 app = Celery('notiflow')
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
+app.conf.beat_scheduler = 'django_celery_beat.schedulers:DatabaseScheduler'
