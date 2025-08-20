@@ -149,7 +149,7 @@ def send_weekly_analytics():
 
         if total == 0 and upcoming.count() == 0:
             continue  # Skip empty users
-
+        print(f"📊 Weekly summary for {user.email}: Total={total}, Sent={sent}, Failed={failed}, Most Used={most_used}")
         context = {
             "user": user,
             "total": total,
