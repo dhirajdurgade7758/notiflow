@@ -200,13 +200,71 @@ from .forms import ReminderForm
 from .ai import parse_natural_reminder, rewrite_message_tone
 import dateparser
 from django.http import HttpResponse
+import re
+
+
+def _smart_modal_response(request, error_message=None, input_value=""):
+    return render(
+        request,
+        'notifications/partials/smart_input_modal.html',
+        {
+            'error_message': error_message,
+            'input_value': input_value,
+        },
+    )
+
+
+def _is_probably_invalid_reminder_text(text):
+    cleaned = (text or '').strip()
+    if len(cleaned) < 8:
+        return True
+
+    letters_only = re.sub(r'[^a-zA-Z\s]', ' ', cleaned).lower()
+    tokens = [token for token in letters_only.split() if token]
+    if len(tokens) < 2:
+        return True
+
+    intent_keywords = {
+        'remind', 'reminder', 'tomorrow', 'today', 'tonight', 'morning',
+        'evening', 'daily', 'weekly', 'monthly', 'every', 'at', 'on',
+        'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday',
+        'sunday', 'am', 'pm', 'call', 'meeting', 'medicine', 'workout',
+        'study', 'pay', 'email', 'submit'
+    }
+    has_intent_word = any(token in intent_keywords for token in tokens)
+    has_time_hint = bool(re.search(r'\b\d{1,2}(:\d{2})?\s*(am|pm)?\b', cleaned, re.IGNORECASE))
+
+    return not (has_intent_word or has_time_hint)
 
 @login_required
 def smart_reminder_view(request):
     if request.method == 'POST' and request.POST.get('input'):
-        raw_input = request.POST.get('input')
+        raw_input = request.POST.get('input', '').strip()
+
+        if _is_probably_invalid_reminder_text(raw_input):
+            return _smart_modal_response(
+                request,
+                error_message="Please enter a clearer reminder with action and time, like 'Remind me to drink water at 9 PM'.",
+                input_value=raw_input,
+            )
+
         print(f"Received raw input: {raw_input}")
-        ai_data = parse_natural_reminder(raw_input)
+        try:
+            ai_data = parse_natural_reminder(raw_input)
+        except Exception:
+            return _smart_modal_response(
+                request,
+                error_message="Couldn't understand that input. Please rephrase with what, when, and how often.",
+                input_value=raw_input,
+            )
+
+        if not isinstance(ai_data, dict):
+            return _smart_modal_response(
+                request,
+                error_message="Invalid reminder format received. Please try again with clearer text.",
+                input_value=raw_input,
+            )
+
         print(f"Parsed AI data: {ai_data}")
 
         # ⏰ Fix parsed time
@@ -216,19 +274,42 @@ def smart_reminder_view(request):
             parsed_time = timezone.now() + timezone.timedelta(minutes=5)
 
         # ✍️ Rewritten message
-        rewritten_message = rewrite_message_tone(ai_data.get('message'), ai_data.get('tone') or 'friendly')
+        parsed_message = (ai_data.get('message') or raw_input).strip()
+        rewritten_message = rewrite_message_tone(parsed_message, ai_data.get('tone') or 'friendly')
+
+        # Ensure title/message always have valid values.
+        parsed_title = (ai_data.get('title') or '').strip()
+        if not parsed_title:
+            parsed_title = (parsed_message[:80] if parsed_message else 'Smart Reminder').strip()
+
+        if not rewritten_message.strip():
+            rewritten_message = parsed_message
+
+        if not parsed_title or not rewritten_message:
+            return _smart_modal_response(
+                request,
+                error_message="Could not build a valid reminder from that text. Please add more detail.",
+                input_value=raw_input,
+            )
 
         # 🛡️ Default notify_type
         notify_type = ai_data.get('notify_type') or 'email'
 
-        Reminder.objects.create(
-            user=request.user,
-            title=ai_data.get('title'),
-            message=rewritten_message,
-            repeat=ai_data.get('repeat', 'none'),
-            send_at=parsed_time,
-            notify_type=notify_type,
-        )
+        try:
+            Reminder.objects.create(
+                user=request.user,
+                title=parsed_title,
+                message=rewritten_message,
+                repeat=ai_data.get('repeat', 'none'),
+                send_at=parsed_time,
+                notify_type=notify_type,
+            )
+        except Exception:
+            return _smart_modal_response(
+                request,
+                error_message="We couldn't save this reminder right now. Please try again in a moment.",
+                input_value=raw_input,
+            )
 
         if request.headers.get('HX-Request'):
             # HTMX → Tell client to redirect via JS
@@ -240,4 +321,4 @@ def smart_reminder_view(request):
             messages.success(request, "✅ Smart reminder created successfully!")
             return redirect('reminder_list')
 
-    return render(request, 'notifications/partials/smart_input_modal.html')
+    return _smart_modal_response(request)

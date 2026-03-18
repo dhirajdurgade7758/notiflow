@@ -3,11 +3,13 @@ import dateparser
 from django.core.mail import send_mail
 from django.utils import timezone
 from django.conf import settings
-
-from .models import Reminder, ReminderFailureLog, InAppNotification
+from .models import *
 from .utils import get_next_send_at, send_sms
 from django.contrib.auth import get_user_model
 from django.template.loader import render_to_string
+from .ai import generate_ai_prompt, call_llm_api
+from django.utils.timezone import make_aware
+
 User = get_user_model()
 
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, max_retries=3)
@@ -175,18 +177,8 @@ def send_weekly_analytics():
             print(f"❌ Failed to send to {user.email}: {e}")
 
 
-import requests
-from django.utils import timezone
-from django.template.loader import render_to_string
-from .models import Reminder, AISuggestion
-from django.core.mail import send_mail
-from .ai import generate_ai_prompt, call_llm_api
-from django.utils.timezone import make_aware
 @shared_task
 def sync_ai_recommendations():
-    from django.contrib.auth import get_user_model
-    User = get_user_model()
-
     one_month_ago = timezone.now() - timezone.timedelta(days=30)
 
     for user in User.objects.all():
@@ -222,3 +214,4 @@ def sync_ai_recommendations():
             recipient_list=[user.email],
             html_message=html
         )
+        print("Weekly AI Reminder Suggestions send to", user.email)

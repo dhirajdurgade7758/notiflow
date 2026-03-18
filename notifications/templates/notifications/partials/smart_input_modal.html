@@ -2,8 +2,8 @@
       hx-post="{% url 'smart-reminder-modal' %}" 
       hx-target="#modal-content" 
       hx-swap="innerHTML"
-      hx-indicator=".generating-indicator">
-  {% csrf_token %}
+      hx-indicator="#btn-generate"> {% csrf_token %}
+  
   <div class="modal-header border-0">
     <div class="w-100">
       <h5 class="modal-title text-gradient d-flex align-items-center">
@@ -13,11 +13,21 @@
     </div>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
   </div>
+  
   <div class="modal-body py-3">
+    {% if error_message %}
+      <div class="alert alert-danger d-flex align-items-start" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2 mt-1"></i>
+        <div>{{ error_message }}</div>
+      </div>
+    {% endif %}
+
     <div class="form-floating">
       <textarea name="input" class="form-control" 
                 placeholder="e.g., Remind me to take medicine every night at 9 PM in a gentle tone"
-                style="height: 120px"></textarea>
+                style="height: 120px"
+                id="smart-input"
+                required>{{ input_value|default:'' }}</textarea>
       <label>Describe your reminder...</label>
     </div>
     <div class="d-flex align-items-center mt-2">
@@ -25,19 +35,22 @@
       <small class="text-muted">e.g, "Remind me to take medicine every night at 9 PM in a gentle tone"</small>
     </div>
   </div>
+  
   <div class="modal-footer border-0 d-flex justify-content-between">
     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
       Cancel
     </button>
-<button type="submit" class="btn btn-primary btn-glow position-relative">
-  <span class="generating-indicator htmx-indicator position-absolute">
-    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-    Generating...
-  </span>
-  <span class="generating-content">
-    <i class="bi bi-stars me-1"></i> Generate
-  </span>
-</button>
+
+    <button type="submit" id="btn-generate" class="btn btn-primary btn-glow position-relative">
+      
+      <span class="generating-indicator position-absolute top-50 start-50 translate-middle">
+        <span class="spinner-border spinner-border-sm me-1" role="status"></span> Generating
+      </span>
+      
+      <span class="generating-content">
+        <i class="bi bi-stars me-1"></i> Generate
+      </span>
+    </button>
   </div>
 </form>
 
@@ -60,26 +73,35 @@
     background-color: #2a2a2a;
   }
   
+  /* --- HTMX LOADING STATE LOGIC --- */
+
+  /* 1. Default State */
   .generating-indicator {
     opacity: 0;
-    display: flex;
-    align-items: center;
-    left: 50%;
-    transform: translateX(-50%);
+    pointer-events: none; /* Prevents spinner from blocking clicks/hover when hidden */
+    transition: opacity 0.2s ease;
+    width: 100%; /* Ensures text doesn't wrap awkwardly */
+    text-align: center;
+  }
+
+  .generating-content {
+    opacity: 1;
     transition: opacity 0.2s ease;
   }
+
+  /* 2. Loading State (Applied when HTMX adds .htmx-request to the BUTTON) */
   
-  .htmx-request .generating-indicator {
+  /* Show Spinner */
+  #btn-generate.htmx-request .generating-indicator {
     opacity: 1;
   }
   
-  .htmx-request .generating-content {
+  /* Hide Content */
+  #btn-generate.htmx-request .generating-content {
     opacity: 0;
   }
   
-  .generating-content {
-    transition: opacity 0.2s ease;
-  }
+  /* --- END LOADING LOGIC --- */
   
   /* Textarea styling */
   .form-control {
@@ -94,9 +116,37 @@
 
 <script>
 document.addEventListener('htmx:afterRequest', function(evt) {
-  if (evt.detail.elt.classList.contains('generating-indicator')) {
-    // Scroll to top when generation completes
-    document.querySelector('.modal-body').scrollTop = 0;
+  // Check if the request originated from our button
+  if (evt.detail.elt.id === 'btn-generate') {
+    // Scroll to top of modal body
+    const modalBody = document.querySelector('.modal-body');
+    if(modalBody) modalBody.scrollTop = 0;
   }
 });
+
+document.addEventListener('submit', function(evt) {
+  const form = evt.target;
+  if (!form || form.getAttribute('hx-post') !== "{% url 'smart-reminder-modal' %}") {
+    return;
+  }
+
+  const inputEl = form.querySelector('#smart-input');
+  const text = (inputEl?.value || '').trim();
+  const hasTimeHint = /\b\d{1,2}(:\d{2})?\s*(am|pm)?\b/i.test(text);
+  const hasIntent = /(remind|reminder|today|tomorrow|every|daily|weekly|monthly|at\s|on\s)/i.test(text);
+
+  if (text.length < 8 || (!hasTimeHint && !hasIntent)) {
+    evt.preventDefault();
+    window.alert("Please enter a valid reminder, for example: 'Remind me to drink water at 9 PM'.");
+    if (inputEl) {
+      inputEl.focus();
+    }
+  }
+});
+
+{% if error_message %}
+window.setTimeout(function () {
+  window.alert({{ error_message|escapejs }});
+}, 0);
+{% endif %}
 </script>

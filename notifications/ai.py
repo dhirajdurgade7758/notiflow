@@ -1,79 +1,78 @@
-import requests
-import json
-import dateparser
-from django.conf import settings
-
-GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_API_KEY = settings.GROQ_API_KEY  # Set this in your Django settings
-
-HEADERS = {
-    "Authorization": f"Bearer {GROQ_API_KEY}",
-    "Content-Type": "application/json"
-}
-
-MODEL = "llama3-70b-8192"
-
-
-
-
-import requests
-import json
 import re
+import json
+import logging
 from ast import literal_eval
 from django.conf import settings
-import logging
+
+import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
 
-MODEL = "llama3-70b-8192"
-GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_API_KEY = settings.GROQ_API_KEY
+# -------------------------------------------------
+# 🔐 GEMINI API SETUP
+# -------------------------------------------------
+genai.configure(api_key=settings.GEMINI_API_KEY)
 
-HEADERS = {
-    "Authorization": f"Bearer {GROQ_API_KEY}",
-    "Content-Type": "application/json"
-}
+# Choose the model you prefer:
+# - "gemini-1.5-flash" → fast + cheap
+# - "gemini-1.5-pro" → better reasoning
+MODEL = "gemini-2.5-flash"
 
 
+# -------------------------------------------------
+# 🔧 Helper: Unified Gemini Response Extractor
+# -------------------------------------------------
+def _extract_text(response):
+    """Extracts clean text from Gemini responses."""
+    try:
+        if hasattr(response, "text"):
+            return response.text
+        elif isinstance(response, dict):
+            return response.get("text", "")
+        else:
+            return str(response)
+    except Exception:
+        return str(response)
+
+
+# -------------------------------------------------
+# 🧠 1. PARSE NATURAL REMINDER (MAIN FUNCTION)
+# -------------------------------------------------
 def parse_natural_reminder(text):
     prompt = (
-        "You are a helpful assistant. Extract structured reminder details from the user's instruction below:\n\n"
-        f"'{text}'\n\n"
-        "Return ONLY a valid JSON object with the following keys:\n"
-        "- title: short title of the reminder\n"
-        "- message: full message to send\n"
-        "- notify_type: one of 'email', 'inapp', or 'sms'. If user didn't specify, return 'email'.\n"
-        "- repeat: one of 'none', 'daily', 'weekly', 'monthly'\n"
-        "- datetime: ISO format datetime string like '2025-06-25T21:00:00'. If user didn't specify, return null.\n"
-        "- tone: one of 'friendly', 'formal', 'motivational', 'gentle', or null if unspecified.\n\n"
-        "Wrap the JSON in a code block like ```json ... ```"
+        "Extract structured reminder details from the user's message.\n\n"
+        f"User said:\n{text}\n\n"
+        "Return ONLY a valid JSON object with keys:\n"
+        "- title\n"
+        "- message\n"
+        "- notify_type ('email','inapp','sms')\n"
+        "- repeat ('none','daily','weekly','monthly')\n"
+        "- datetime (ISO timestamp or null)\n"
+        "- tone ('friendly','formal','motivational','gentle' or null)\n\n"
+        "Wrap JSON inside a markdown code block like:\n```json\n{...}\n```"
     )
 
-    payload = {
-        "model": MODEL,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.4
-    }
-
     try:
-        response = requests.post(GROQ_API_URL, headers=HEADERS, data=json.dumps(payload))
-        response.raise_for_status()
-        data = response.json()
-        content = data["choices"][0]["message"]["content"]
+        model = genai.GenerativeModel(MODEL)
+
+        response = model.generate_content(prompt)
+        content = _extract_text(response)
 
         if settings.DEBUG:
-            logger.debug(f"🧠 LLM Response: {content}")
+            logger.debug(f"🧠 Gemini Response: {content}")
 
-        # Extract JSON from markdown/code block
+        # Extract JSON from ```json ``` code block
         match = re.search(r"```(?:json)?\s*({.*?})\s*```", content, re.DOTALL)
         if match:
             json_block = match.group(1)
         else:
+            # fallback: find first {...}
             match = re.search(r"({.*})", content, re.DOTALL)
             if not match:
-                raise ValueError("No JSON found in LLM response.")
+                raise ValueError("No JSON found in Gemini response.")
             json_block = match.group(1)
 
+        # Remove comments if any
         json_block = re.sub(r"//.*", "", json_block)
 
         try:
@@ -86,35 +85,36 @@ def parse_natural_reminder(text):
         raise
 
 
+
+# -------------------------------------------------
+# 💬 2. REWRITE MESSAGE TONE
+# -------------------------------------------------
 def rewrite_message_tone(message, tone="friendly"):
     prompt = (
-        f"Rewrite the following reminder message in a {tone} tone.\n"
-        "Only return the rewritten message, no explanation or intro:\n\n"
-        f"{message}"
+        f"Rewrite the reminder message below in a {tone} tone.\n"
+        "Return ONLY the rewritten text. No explanation.\n\n"
+        f"Message:\n{message}"
     )
 
-    payload = {
-        "model": MODEL,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.6
-    }
-
     try:
-        response = requests.post(GROQ_API_URL, headers=HEADERS, data=json.dumps(payload))
-        response.raise_for_status()
-        rewritten = response.json()["choices"][0]["message"]["content"].strip()
+        model = genai.GenerativeModel(MODEL)
+        response = model.generate_content(prompt)
+        rewritten = _extract_text(response).strip()
 
         if settings.DEBUG:
-            logger.debug(f"📝 Rewritten message [{tone}]: {rewritten}")
+            logger.debug(f"📝 Rewritten [{tone}]: {rewritten}")
 
         return rewritten
 
     except Exception as e:
-        logger.error(f"❌ Failed to rewrite message tone: {e}", exc_info=True)
-        return message  # fallback: return original message
+        logger.error(f"❌ Failed to rewrite tone: {e}", exc_info=True)
+        return message  # fallback
 
 
 
+# -------------------------------------------------
+# 🤖 3. GENERATE AI SUGGESTED REMINDERS
+# -------------------------------------------------
 def generate_ai_prompt(user, reminders):
     reminder_data = "\n".join(
         f"- {r.title} at {r.send_at.strftime('%A %I:%M %p')} ({r.notify_type})"
@@ -122,27 +122,27 @@ def generate_ai_prompt(user, reminders):
     )
 
     return (
-        f"This user has set the following reminders:\n"
-        f"{reminder_data}\n\n"
-        "Based on their activity, suggest 2–3 new helpful reminders to improve productivity or wellness. "
-        "Return a JSON list with items having title, message, and datetime (optional)."
+        f"The user has these reminders:\n{reminder_data}\n\n"
+        "Suggest 2–3 new helpful reminders.\n"
+        "Return a JSON list like:\n"
+        "[ {\"title\":..., \"message\":..., \"datetime\":...}, ... ]"
     )
 
 
+
 def call_llm_api(prompt):
-    payload = {
-        "model": MODEL,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.7
-    }
+    try:
+        model = genai.GenerativeModel(MODEL)
+        response = model.generate_content(prompt)
+        content = _extract_text(response)
 
-    response = requests.post(GROQ_API_URL, headers=HEADERS, data=json.dumps(payload))
-    response.raise_for_status()
-    content = response.json()["choices"][0]["message"]["content"]
+        # Extract list [...]
+        match = re.search(r"\[.*\]", content, re.DOTALL)
+        if not match:
+            raise ValueError("No JSON list found in Gemini response.")
 
-    match = re.search(r"\[.*\]", content, re.DOTALL)
-    if not match:
-        raise ValueError("No JSON list found.")
+        return json.loads(match.group(0))
 
-    suggestions = match.group(0)
-    return json.loads(suggestions)
+    except Exception as e:
+        logger.error(f"❌ Failed to generate suggestions: {e}", exc_info=True)
+        raise

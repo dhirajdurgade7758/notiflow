@@ -59,7 +59,7 @@
                   {% endif %}
                 </td>
                 <td class="text-end pe-4">
-                  {% if r.status == "scheduled" and r.is_active %}
+                  {% if r.status != "cancelled" and r.is_active %}
                     <a href="{% url 'cancel_reminder' r.pk %}" class="btn btn-sm btn-danger btn-pill">
                       <i class="bi bi-x-circle me-1"></i>Cancel
                     </a>
