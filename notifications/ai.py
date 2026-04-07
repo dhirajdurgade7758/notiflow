@@ -39,17 +39,105 @@ def _extract_text(response):
 # 🧠 1. PARSE NATURAL REMINDER (MAIN FUNCTION)
 # -------------------------------------------------
 def parse_natural_reminder(text):
+    from datetime import datetime, timedelta
+    
+    # Get current date/time for context
+    now = datetime.now()
+    today = now.date()
+    current_year = now.year
+    current_month = now.month
+    current_day = now.day
+    current_weekday = today.strftime('%A')  # e.g., "Tuesday"
+    
+    # Pre-calculate common dates for examples
+    tomorrow = today + timedelta(days=1)
+    day_after_tomorrow = today + timedelta(days=2)
+    next_week = today + timedelta(days=7)
+    next_month = today + timedelta(days=30)
+    
+    # Find next occurrence of each weekday
+    weekday_dates = {}
+    for day_offset in range(1, 8):
+        future_date = today + timedelta(days=day_offset)
+        weekday_name = future_date.strftime('%A')
+        if weekday_name not in weekday_dates:
+            weekday_dates[weekday_name] = future_date
+    
     prompt = (
-        "Extract structured reminder details from the user's message.\n\n"
-        f"User said:\n{text}\n\n"
-        "Return ONLY a valid JSON object with keys:\n"
-        "- title\n"
-        "- message\n"
-        "- notify_type ('email','inapp','sms')\n"
-        "- repeat ('none','daily','weekly','monthly')\n"
-        "- datetime (ISO timestamp or null)\n"
-        "- tone ('friendly','formal','motivational','gentle' or null)\n\n"
-        "Wrap JSON inside a markdown code block like:\n```json\n{...}\n```"
+        "You are a reminder parsing expert. Extract reminder details from natural language.\n\n"
+        f"SYSTEM CONTEXT (IMPORTANT - Use this to calculate dates):\n"
+        f"- Current date: {today.strftime('%A, %B %d, %Y')} (Day {current_day} of Month {current_month}, Year {current_year})\n"
+        f"- Current time: {now.strftime('%I:%M %p')} ({now.strftime('%H:%M:%S')} in 24-hour format)\n\n"
+        
+        f"DATE CALCULATION RULES (Parse user's relative dates using today's context):\n"
+        f"✓ 'today' → {today.isoformat()}\n"
+        f"✓ 'tomorrow' → {tomorrow.isoformat()}\n"
+        f"✓ 'day after tomorrow' → {day_after_tomorrow.isoformat()}\n"
+        f"✓ 'next Monday' → {weekday_dates.get('Monday', today + timedelta(days=1)).isoformat()}\n"
+        f"✓ 'next Tuesday' → {weekday_dates.get('Tuesday', today + timedelta(days=1)).isoformat()}\n"
+        f"✓ 'next week' → {next_week.isoformat()}\n"
+        f"✓ If user says day name (e.g., 'Monday'), calculate to NEXT occurrence using today as reference\n"
+        f"✓ If user says 'next Monday' and today IS Monday, treat as 7 days from now\n"
+        f"✓ If user says 'this Friday' and today is Tuesday (April 8), that means April 12 (4 days away)\n"
+        f"✓ ALWAYS include FULL YEAR {current_year} in dates (unless explicitly mentioning next year)\n\n"
+        
+        f"TIME CALCULATION RULES:\n"
+        f"✓ If no time mentioned → Default to 09:00:00 (9 AM)\n"
+        f"✓ '5 PM' or '17:00' → 17:00:00\n"
+        f"✓ '3:30 PM' → 15:30:00\n"
+        f"✓ 'in 30 minutes' → Add 30 min to current time {now.strftime('%H:%M:%S')}\n"
+        f"✓ 'in 2 hours' → Add 2 hours to current time\n"
+        f"✓ 'at noon' → 12:00:00\n"
+        f"✓ 'at midnight' → 00:00:00 (next day)\n"
+        f"✓ 'in the evening' → 18:00:00\n"
+        f"✓ 'in the morning' → 08:00:00\n\n"
+        
+        f"WORKED EXAMPLES (Learn from these):\n"
+        f"Example 1:\n"
+        f"  User: 'Remind me tomorrow at 5 PM to exercise'\n"
+        f"  Today is: {today.strftime('%A, %B %d, %Y')}\n"
+        f"  Tomorrow is: {tomorrow.strftime('%A, %B %d, %Y')}\n"
+        f"  Expected datetime: '{tomorrow.isoformat()}T17:00:00'\n\n"
+        
+        f"Example 2:\n"
+        f"  User: 'Call mom day after tomorrow'\n"
+        f"  Today is: {today.strftime('%A, %B %d, %Y')}\n"
+        f"  Day after tomorrow is: {day_after_tomorrow.strftime('%A, %B %d, %Y')}\n"
+        f"  No time specified → Default to 9 AM\n"
+        f"  Expected datetime: '{day_after_tomorrow.isoformat()}T09:00:00'\n\n"
+        
+        f"Example 3:\n"
+        f"  User: 'Next Monday at 3 PM meeting'\n"
+        f"  Today is: {today.strftime('%A, %B %d, %Y')}\n"
+        f"  Next Monday is: {weekday_dates.get('Monday', today + timedelta(days=1)).strftime('%A, %B %d, %Y')}\n"
+        f"  Expected datetime: '{weekday_dates.get('Monday', today + timedelta(days=1)).isoformat()}T15:00:00'\n\n"
+        
+        f"Example 4:\n"
+        f"  User: 'In 2 hours drink water' (said at {now.strftime('%I:%M %p')})\n"
+        f"  Current time: {now.strftime('%I:%M %p')}\n"
+        f"  In 2 hours: {(now + timedelta(hours=2)).strftime('%I:%M %p')}\n"
+        f"  Same day: {today.isoformat()}\n"
+        f"  Expected datetime: '{today.isoformat()}T{(now + timedelta(hours=2)).strftime('%H:%M:%S')}'\n\n"
+        
+        f"User's request:\n{text}\n\n"
+        
+        "Extract and return a valid JSON object with:\n"
+        "- title: Short action title (max 10 words)\n"
+        "- message: Full reminder text\n"
+        "- notify_type: 'email', 'inapp', or 'sms' (default: 'inapp')\n"
+        "- repeat: 'none', 'daily', 'weekly', 'monthly' (default: 'none')\n"
+        "- datetime: ISO 8601 format 'YYYY-MM-DDTHH:MM:SS' - MUST include date AND time\n"
+        "- tone: 'friendly', 'formal', 'motivational', 'gentle', or null\n\n"
+        
+        "CRITICAL RULES:\n"
+        "⚠️ ALWAYS include 'datetime' field\n"
+        "⚠️ ALWAYS use correct year {year}\n"
+        "⚠️ ALWAYS calculate relative dates based on today ({today})\n"
+        "⚠️ If time not specified, use 09:00:00\n"
+        "⚠️ Return ONLY valid JSON inside ```json``` code block\n"
+        "⚠️ No additional text\n\n"
+        
+        "Return format:\n```json\n{{\n  \"title\": \"...\",\n  \"message\": \"...\",\n  \"notify_type\": \"inapp\",\n  \"repeat\": \"none\",\n  \"datetime\": \"2026-MM-DDTHH:MM:SS\",\n  \"tone\": \"friendly\"\n}}\n```".format(year=current_year, today=today.isoformat())
     )
 
     try:
@@ -59,6 +147,7 @@ def parse_natural_reminder(text):
         content = _extract_text(response)
 
         if settings.DEBUG:
+            logger.debug(f"🧠 Gemini Prompt Context: Today={today}, CurrentTime={now.strftime('%H:%M:%S')}")
             logger.debug(f"🧠 Gemini Response: {content}")
 
         # Extract JSON from ```json ``` code block
@@ -76,7 +165,10 @@ def parse_natural_reminder(text):
         json_block = re.sub(r"//.*", "", json_block)
 
         try:
-            return json.loads(json_block)
+            result = json.loads(json_block)
+            if settings.DEBUG:
+                logger.debug(f"✅ Parsed reminder: {result}")
+            return result
         except json.JSONDecodeError:
             return literal_eval(json_block)
 

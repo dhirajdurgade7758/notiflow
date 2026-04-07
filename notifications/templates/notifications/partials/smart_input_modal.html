@@ -22,7 +22,18 @@
       </div>
     {% endif %}
 
-    <div class="form-floating">
+    <!-- Voice Status Display -->
+    <div id="voice-status" class="alert alert-info d-none mb-3" role="alert">
+      <small id="status-text"></small>
+    </div>
+
+    <!-- Voice Transcript Display -->
+    <div id="voice-transcript" class="d-none mb-3 p-2 bg-light rounded">
+      <small class="text-muted">📝 Transcribed:</small>
+      <div id="transcript-text" class="mt-1 text-dark"></div>
+    </div>
+
+    <div class="form-floating mb-3">
       <textarea name="input" class="form-control" 
                 placeholder="e.g., Remind me to take medicine every night at 9 PM in a gentle tone"
                 style="height: 120px"
@@ -30,9 +41,16 @@
                 required>{{ input_value|default:'' }}</textarea>
       <label>Describe your reminder...</label>
     </div>
-    <div class="d-flex align-items-center mt-2">
-      <i class="bi bi-lightbulb text-warning me-2"></i>
-      <small class="text-muted">e.g, "Remind me to take medicine every night at 9 PM in a gentle tone"</small>
+
+    <!-- Mic Button & Instructions -->
+    <div class="d-flex align-items-center justify-content-between">
+      <div class="d-flex align-items-center">
+        <i class="bi bi-lightbulb text-warning me-2"></i>
+        <small class="text-muted">Type or click 🎤 to speak</small>
+      </div>
+      <button type="button" id="voice-mic-btn" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-mic"></i> Speak
+      </button>
     </div>
   </div>
   
@@ -112,41 +130,49 @@
   .form-floating label {
     padding: 1rem;
   }
+
+  /* Voice mic button animation */
+  .animate-pulse {
+    animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: .5;
+    }
+  }
+
+  #voice-status {
+    border-left: 4px solid #0dcaf0;
+  }
+
+  [data-bs-theme="dark"] #voice-transcript {
+    background-color: #3a3a3a !important;
+  }
+
+  [data-bs-theme="dark"] #voice-transcript .text-dark {
+    color: #e0e0e0 !important;
+  }
 </style>
 
 <script>
-document.addEventListener('htmx:afterRequest', function(evt) {
-  // Check if the request originated from our button
-  if (evt.detail.elt.id === 'btn-generate') {
-    // Scroll to top of modal body
-    const modalBody = document.querySelector('.modal-body');
-    if(modalBody) modalBody.scrollTop = 0;
+console.log('📋 Smart reminder modal script loaded');
+
+// Voice assistant is initialized in base.html
+// Both direct click listeners and modal/HTMX event listeners are set up there
+// This script just confirms the modal DOM is ready
+
+document.addEventListener('shown.bs.modal', function(e) {
+  const micBtn = document.getElementById('voice-mic-btn');
+  if (micBtn) {
+    console.log('✅ Smart reminder modal opened - voice is READY');
   }
 });
-
-document.addEventListener('submit', function(evt) {
-  const form = evt.target;
-  if (!form || form.getAttribute('hx-post') !== "{% url 'smart-reminder-modal' %}") {
-    return;
-  }
-
-  const inputEl = form.querySelector('#smart-input');
-  const text = (inputEl?.value || '').trim();
-  const hasTimeHint = /\b\d{1,2}(:\d{2})?\s*(am|pm)?\b/i.test(text);
-  const hasIntent = /(remind|reminder|today|tomorrow|every|daily|weekly|monthly|at\s|on\s)/i.test(text);
-
-  if (text.length < 8 || (!hasTimeHint && !hasIntent)) {
-    evt.preventDefault();
-    window.alert("Please enter a valid reminder, for example: 'Remind me to drink water at 9 PM'.");
-    if (inputEl) {
-      inputEl.focus();
-    }
-  }
-});
-
-{% if error_message %}
-window.setTimeout(function () {
-  window.alert({{ error_message|escapejs }});
-}, 0);
-{% endif %}
 </script>
+
+
+
+

@@ -129,6 +129,956 @@
       color: var(--bs-body-color);
     }
   </style>
+  
+  <!-- Voice Assistant Script -->
+  <script>
+// ==============================================
+// VOICE ASSISTANT FOR NOTIFLOW
+// ==============================================
+console.log('🎤 Voice Assistant Loading...');
+
+class VoiceAssistant {
+  constructor() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+      console.warn("Speech Recognition API not supported");
+      this.supported = false;
+      return;
+    }
+    
+    this.supported = true;
+    this.recognizer = new SpeechRecognition();
+    this.recognizer.continuous = false;
+    this.recognizer.interimResults = true;
+    this.recognizer.lang = 'en-US';
+    this.synth = window.speechSynthesis;
+    
+    this.isListening = false;
+    this.finalTranscript = '';
+    this.interimTranscript = '';
+    this.attempts = 0;
+    this.maxAttempts = 3;
+    
+    this.micBtn = null;
+    this.inputField = null;
+    this.statusDisplay = null;
+    this.transcriptDisplay = null;
+    
+    this._setupRecognitionListeners();
+  }
+  
+  init(micBtnSelector, inputSelector, statusSelector = null, transcriptSelector = null) {
+    console.log('🔧 Initializing voice with:', { micBtnSelector, inputSelector });
+    
+    this.micBtn = document.querySelector(micBtnSelector);
+    this.inputField = document.querySelector(inputSelector);
+    this.statusDisplay = document.querySelector(statusSelector);
+    this.transcriptDisplay = document.querySelector(transcriptSelector);
+    
+    if (!this.micBtn || !this.inputField) {
+      console.error('❌ Missing required elements');
+      console.error('  micBtn:', !!this.micBtn);
+      console.error('  inputField:', !!this.inputField);
+      return false;
+    }
+    
+    console.log('✅ Voice initialized - ready for clicks');
+    return true;
+  }
+  
+  toggleListening() {
+    console.log('🎤 Toggle listening');
+    if (!this.supported) {
+      alert('Speech recognition not supported');
+      return;
+    }
+    
+    if (this.isListening) {
+      this.stopListening();
+    } else {
+      this.startListening();
+    }
+  }
+  
+  startListening() {
+    console.log('🎙️ START LISTENING');
+    this.finalTranscript = '';
+    this.interimTranscript = '';
+    this.isListening = true;
+    this.attempts++;
+    
+    this._updateMicButton('listening');
+    this._updateStatus(`🎤 Listening... (Attempt ${this.attempts}/${this.maxAttempts})`);
+    
+    try {
+      this.recognizer.start();
+    } catch (e) {
+      console.log('Already listening');
+    }
+  }
+  
+  stopListening() {
+    this.isListening = false;
+    this.recognizer.stop();
+    this._updateMicButton('idle');
+  }
+  
+  _setupRecognitionListeners() {
+    this.recognizer.onstart = () => {
+      console.log('🎤 Microphone started');
+      this._updateStatus('🎙️ Microphone is active...');
+    };
+    
+    this.recognizer.onresult = (event) => {
+      this.interimTranscript = '';
+      
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          this.finalTranscript += transcript + ' ';
+        } else {
+          this.interimTranscript += transcript;
+        }
+      }
+      
+      const displayText = this.finalTranscript + this.interimTranscript;
+      this._updateTranscript(displayText);
+      this._updateStatus(`📝 You said: ${displayText}`);
+    };
+    
+    this.recognizer.onerror = (event) => {
+      let errorMsg = 'Error: ' + event.error;
+      console.error('🔴 Speech error:', event.error);
+      this._showError(errorMsg);
+      this.stopListening();
+    };
+    
+    this.recognizer.onend = () => {
+      console.log('🛑 Recognition ended');
+      this.isListening = false;
+      
+      if (this.finalTranscript.trim()) {
+        this._processVoiceInput(this.finalTranscript.trim());
+      } else {
+        this._showError("I didn't catch that. Try again?");
+        this._updateMicButton('idle');
+        
+        if (this.attempts < this.maxAttempts) {
+          this._updateStatus(`Try again (${this.attempts}/${this.maxAttempts})`);
+        } else {
+          this._showError('Max retries reached');
+          this.attempts = 0;
+        }
+      }
+    };
+  }
+  
+  _processVoiceInput(transcript) {
+    const trimmedText = transcript.trim();
+    console.log('📝 Processing:', trimmedText);
+    
+    if (this.inputField) {
+      this.inputField.value = trimmedText;
+      this._updateStatus(`✅ Transcribed: "${trimmedText}"`);
+    }
+    
+    this._updateMicButton('complete');
+  }
+  
+  speak(text) {
+    if (!this.synth) return;
+    this.synth.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.9;
+    this.synth.speak(utterance);
+  }
+  
+  _updateMicButton(state) {
+    if (!this.micBtn) return;
+    this.micBtn.className = '';
+    
+    switch (state) {
+      case 'listening':
+        this.micBtn.classList.add('btn', 'btn-danger', 'btn-sm', 'animate-pulse');
+        this.micBtn.innerHTML = '<i class="bi bi-mic-fill"></i> Listening...';
+        break;
+      case 'complete':
+        this.micBtn.classList.add('btn', 'btn-success', 'btn-sm');
+        this.micBtn.innerHTML = '<i class="bi bi-check-circle"></i> Done';
+        break;
+      default:
+        this.micBtn.classList.add('btn', 'btn-outline-primary', 'btn-sm');
+        this.micBtn.innerHTML = '<i class="bi bi-mic"></i> Speak';
+    }
+  }
+  
+  _updateStatus(message) {
+    if (this.statusDisplay) {
+      this.statusDisplay.textContent = message;
+      this.statusDisplay.style.display = 'block';
+    }
+  }
+  
+  _updateTranscript(text) {
+    if (this.transcriptDisplay) {
+      this.transcriptDisplay.textContent = text;
+      this.transcriptDisplay.style.display = 'block';
+    }
+  }
+  
+  _showError(message) {
+    this._updateStatus(`❌ ${message}`);
+    this.speak(message);
+  }
+}
+
+// Create voiceAssistant immediately
+let voiceAssistant = new VoiceAssistant();
+window.voiceAssistant = voiceAssistant;
+console.log('✅ voiceAssistant created:', !!voiceAssistant);
+console.log('✅ Supported:', voiceAssistant.supported);
+
+// Click handlers - Use event delegation for dynamically loaded content
+document.addEventListener('click', function(e) {
+  console.log('🖱️ Click detected on:', e.target.id, e.target.className);
+  
+  // Modal Mic Button
+  const micBtn = e.target.closest('#voice-mic-btn');
+  if (micBtn) {
+    console.log('🎤🎤🎤 MIC BUTTON CLICKED 🎤🎤🎤');
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('voiceAssistant:', !!window.voiceAssistant);
+    if (window.voiceAssistant) {
+      window.voiceAssistant.toggleListening();
+    }
+    return false;
+  }
+}, true); // Use capture phase for early interception
+
+// Initialize when modal shows
+document.addEventListener('shown.bs.modal', function(e) {
+  console.log('📢 Modal shown, initializing voice');
+  if (voiceAssistant) {
+    voiceAssistant.init(
+      '#voice-mic-btn',
+      '#smart-input',
+      '#voice-status',
+      '#voice-transcript'
+    );
+  }
+});
+
+// Initialize when HTMX swaps content
+document.addEventListener('htmx:afterSwap', function(evt) {
+  const micBtn = document.getElementById('voice-mic-btn');
+  if (micBtn && voiceAssistant) {
+    console.log('📦 HTMX swap, initializing voice');
+    voiceAssistant.init(
+      '#voice-mic-btn',
+      '#smart-input',
+      '#voice-status',
+      '#voice-transcript'
+    );
+  }
+});
+
+console.log('✅ Voice Assistant Loaded - Click handlers ready');
+console.log('✅ Event listeners: shown.bs.modal, htmx:afterSwap, document.click');
+
+// ==============================================
+// WAKE WORD DETECTOR - "HEY NOTIFLOW"
+// ==============================================
+console.log('🎤 Wake Word Detector Loading...');
+
+// ⚡ Fuzzy string matching - Levenshtein distance
+function levenshteinDistance(str1, str2) {
+  const len1 = str1.length;
+  const len2 = str2.length;
+  const matrix = Array(len2 + 1).fill(null).map(() => Array(len1 + 1).fill(0));
+  
+  for (let i = 0; i <= len1; i++) matrix[0][i] = i;
+  for (let j = 0; j <= len2; j++) matrix[j][0] = j;
+  
+  for (let j = 1; j <= len2; j++) {
+    for (let i = 1; i <= len1; i++) {
+      const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
+      matrix[j][i] = Math.min(
+        matrix[j][i - 1] + 1,
+        matrix[j - 1][i] + 1,
+        matrix[j - 1][i - 1] + indicator
+      );
+    }
+  }
+  
+  return matrix[len2][len1];
+}
+
+// Calculate similarity percentage (0-100)
+function stringSimilarity(str1, str2) {
+  const maxLen = Math.max(str1.length, str2.length);
+  if (maxLen === 0) return 100;
+  const distance = levenshteinDistance(str1.toLowerCase(), str2.toLowerCase());
+  return ((maxLen - distance) / maxLen) * 100;
+}
+
+class WakeWordDetector {
+  constructor() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+      console.warn("Wake word detection not supported");
+      this.supported = false;
+      return;
+    }
+    
+    this.supported = true;
+    this.wakeWordRecognizer = new SpeechRecognition();
+    this.wakeWordRecognizer.continuous = true; // Keep listening
+    this.wakeWordRecognizer.interimResults = true;
+    this.wakeWordRecognizer.lang = 'en-US';
+    
+    this.reminderRecognizer = new SpeechRecognition();
+    this.reminderRecognizer.continuous = false;
+    this.reminderRecognizer.interimResults = true;
+    this.reminderRecognizer.lang = 'en-US';
+    
+    this.synth = window.speechSynthesis;
+    this.isListeningForWakeWord = false;
+    this.isCapturingReminder = false;
+    this.wakeWordDetected = false;
+    this.WAKE_WORD = 'okay flow'; // Changed to simpler wake word
+    this.SIMILARITY_THRESHOLD = 65; // 65% match (more lenient for speech variations)
+    this.transcribedReminder = '';
+    
+    this._setupWakeWordListeners();
+    this._setupReminderListeners();
+  }
+  
+  start() {
+    if (!this.supported) {
+      console.warn('Wake word detection not supported');
+      return false;
+    }
+    
+    console.log('🎤 Starting wake word detection...');
+    this.isListeningForWakeWord = true;
+    
+    try {
+      this.wakeWordRecognizer.start();
+    } catch (e) {
+      console.log('Already listening for wake word');
+    }
+    
+    return true;
+  }
+  
+  stop() {
+    console.log('🛑 Stopping wake word detection');
+    this.isListeningForWakeWord = false;
+    this.wakeWordRecognizer.stop();
+  }
+  
+  _setupWakeWordListeners() {
+    this.wakeWordRecognizer.onstart = () => {
+      console.log('🎤 Wake word detection started');
+    };
+    
+    this.wakeWordRecognizer.onresult = (event) => {
+      let interimTranscript = '';
+      
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript.toLowerCase().trim();
+        
+        if (event.results[i].isFinal) {
+          console.log('🔍 Final transcript:', transcript);
+          
+          // ⚡ Use fuzzy matching instead of exact substring
+          const similarity = stringSimilarity(transcript, this.WAKE_WORD);
+          console.log(`📊 Similarity: "${transcript}" vs "${this.WAKE_WORD}" = ${similarity.toFixed(1)}%`);
+          
+          if (similarity >= this.SIMILARITY_THRESHOLD) {
+            console.log('✅✅✅ WAKE WORD DETECTED: "OKAY FLOW" ✅✅✅');
+            this.wakeWordDetected = true;
+            this.stop();
+            this._showListeningPopup();
+            return;
+          } else if (similarity >= 50) {
+            // Still show it was close
+            console.log('👂 Close match but below threshold:', similarity.toFixed(1) + '%');
+          }
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+      
+      if (interimTranscript) {
+        console.log('👂 Listening for wake word... interim:', interimTranscript);
+      }
+    };
+    
+    this.wakeWordRecognizer.onerror = (event) => {
+      console.error('🔴 Wake word error:', event.error);
+    };
+    
+    this.wakeWordRecognizer.onend = () => {
+      console.log('🛑 Wake word detection ended');
+      // Restart if still supposed to be listening
+      if (this.isListeningForWakeWord && !this.wakeWordDetected) {
+        console.log('↻ Restarting wake word detection...');
+        setTimeout(() => this.start(), 500);
+      }
+    };
+  }
+  
+  _setupReminderListeners() {
+    this.reminderRecognizer.onstart = () => {
+      console.log('🎙️ Reminder capture started');
+      this.transcribedReminder = ''; // Reset only at start
+    };
+    
+    this.reminderRecognizer.onresult = (event) => {
+      let interimTranscript = '';
+      
+      console.log(`📊 Result event: resultIndex=${event.resultIndex}, length=${event.results.length}`);
+      
+      // Process all results from resultIndex onwards
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        const isFinal = event.results[i].isFinal;
+        
+        console.log(`  [${i}] "${transcript}" (final: ${isFinal})`);
+        
+        if (isFinal) {
+          // Add to permanent transcript
+          this.transcribedReminder += transcript + ' ';
+          console.log(`✅ Added final: "${transcript}"`);
+          console.log(`📝 Current full transcript: "${this.transcribedReminder}"`);
+        } else {
+          // Collect interim for display
+          interimTranscript += transcript;
+        }
+      }
+      
+      // Display: show final text + current interim together
+      const displayText = this.transcribedReminder + interimTranscript;
+      this._updatePopupText(displayText);
+      console.log(`👁️ Displaying: "${displayText}"`);
+    };
+    
+    this.reminderRecognizer.onerror = (event) => {
+      console.error('🔴 Reminder capture error:', event.error);
+      this._updatePopupStatus(`❌ Error: ${event.error}`);
+      this.speak(`Sorry, I couldn't hear that. ${event.error}`);
+    };
+    
+    this.reminderRecognizer.onend = () => {
+      console.log('🛑 Reminder capture ended');
+      console.log(`📝 Final transcript: "${this.transcribedReminder.trim()}"`);
+      
+      if (this.transcribedReminder.trim()) {
+        this._createReminderViaAPI(this.transcribedReminder.trim());
+      } else {
+        this._updatePopupStatus('❌ No reminder text captured');
+        this.speak('I did not catch what you said. Please try again.');
+        this._hideListeningPopup();
+        // Restart wake word detection
+        setTimeout(() => this.start(), 1000);
+      }
+    };
+  }
+  
+  _showListeningPopup() {
+    console.log('📭 Showing listening popup...');
+    
+    let popup = document.getElementById('wake-word-popup');
+    if (!popup) {
+      popup = document.createElement('div');
+      popup.id = 'wake-word-popup';
+      popup.innerHTML = `
+        <div id="wake-word-popup-backdrop" class="position-fixed top-0 start-0 w-100 h-100" 
+             style="background: rgba(0,0,0,0.5); z-index: 9998;"></div>
+        <div class="position-fixed top-50 start-50 translate-middle" style="z-index: 9999;">
+          <div class="card border-0 shadow-lg" style="width: 400px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="card-body text-center text-white p-5">
+              <div style="font-size: 64px; margin-bottom: 1rem; animation: pulse 1.5s infinite;">
+                🎤
+              </div>
+              <h4 class="card-title mb-3">Listening for Reminder...</h4>
+              <p class="card-text mb-2" id="wake-word-popup-text" style="font-size: 18px; min-height: 60px;">
+                Tell me what you'd like to be reminded about
+              </p>
+              <div class="mt-4">
+                <small id="wake-word-popup-status" style="color: rgba(255,255,255,0.8);">🎙️ Listening...</small>
+              </div>
+              <button class="btn btn-light btn-sm mt-3" onclick="window.wakeWordDetector._hideListeningPopup()">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(popup);
+      
+      // Add CSS for animation
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.7; transform: scale(1.1); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    popup.style.display = 'block';
+    
+    // Start listening for reminder
+    this.isCapturingReminder = true;
+    this.transcribedReminder = '';
+    
+    try {
+      this.reminderRecognizer.start();
+    } catch (e) {
+      console.log('Already listening');
+    }
+  }
+  
+  _hideListeningPopup() {
+    console.log('📭 Hiding listening popup...');
+    const popup = document.getElementById('wake-word-popup');
+    if (popup) {
+      popup.style.display = 'none';
+    }
+    this.isCapturingReminder = false;
+    this.reminderRecognizer.stop();
+  }
+  
+  _updatePopupText(text) {
+    const textEl = document.getElementById('wake-word-popup-text');
+    if (textEl) {
+      textEl.textContent = text || 'Tell me what you\'d like to be reminded about';
+    }
+  }
+  
+  _updatePopupStatus(status) {
+    const statusEl = document.getElementById('wake-word-popup-status');
+    if (statusEl) {
+      statusEl.textContent = status;
+    }
+  }
+  
+  _createReminderViaAPI(reminderText) {
+    console.log('📝 Sending raw input to LLM:', reminderText);
+    this._updatePopupStatus('⏳ Processing with AI...');
+    
+    // Get the CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                      document.querySelector('meta[name="csrf-token"]')?.content ||
+                      this._getCookie('csrftoken');
+    
+    const formData = new FormData();
+    // Send RAW input - let the backend LLM handle parsing, dates, extraction, etc.
+    formData.append('input', reminderText);
+    
+    const apiUrl = '/smart-reminder/modal/';
+    console.log(`📤 API: POST ${apiUrl}`);
+    console.log(`📝 Raw input: "${reminderText}"`);
+    console.log(`💡 Backend AI will handle: date parsing, time extraction, action understanding, tone rewriting`);
+    
+    fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrfToken || '',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: formData,
+      credentials: 'same-origin'
+    })
+    .then(response => {
+      console.log(`📨 Response: ${response.status} ${response.statusText}`);
+      
+      if (response.ok) {
+        return response.text();
+      } else {
+        throw new Error(`HTTP ${response.status}`);
+      }
+    })
+    .then(html => {
+      console.log('✅ Reminder created by AI backend');
+      
+      // Extract action for confirmation (simple extraction)
+      const actionMatch = reminderText.match(/(?:to|remind|call|send|go|do|message)\s+(.+?)(?:\s+(?:at|in|after|tomorrow|today|monday|sunday)|\s+@|\s+on|$)/i);
+      const action = actionMatch ? actionMatch[1].trim() : 'that task';
+      
+      // Natural confirmation
+      const confirmationMsg = `Perfect! I'll remind you to ${action}`;
+      console.log(`🎤 Confirmation: "${confirmationMsg}"`);
+      this.speak(confirmationMsg);
+      this._updatePopupStatus(`✅ Reminder set!`);
+      
+      setTimeout(() => {
+        this._hideListeningPopup();
+        this.wakeWordDetected = false;
+        setTimeout(() => this.start(), 1500);
+      }, 2500);
+    })
+    .catch(error => {
+      console.error('❌ Error:', error.message);
+      const errorMsg = `Sorry, I had trouble saving that. Please try again.`;
+      console.log(`🎤 Error message: "${errorMsg}"`);
+      this.speak(errorMsg);
+      this._updatePopupStatus(`❌ ${error.message}`);
+      
+      setTimeout(() => {
+        this._hideListeningPopup();
+        this.wakeWordDetected = false;
+        setTimeout(() => this.start(), 2500);
+      }, 2500);
+    });
+  }
+  
+  _getCookie(name) {
+    const nameEQ = name + "=";
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      let cookie = cookies[i].trim();
+      if (cookie.indexOf(nameEQ) === 0) {
+        return decodeURIComponent(cookie.substring(nameEQ.length));
+      }
+    }
+    return '';
+  }
+  
+  speak(text) {
+    if (!this.synth) return;
+    this.synth.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.85;
+    this.synth.speak(utterance);
+  }
+}
+
+// Create wake word detector
+let wakeWordDetector = new WakeWordDetector();
+window.wakeWordDetector = wakeWordDetector;
+
+console.log(`🎤 Wake Word Detector Ready`);
+console.log(`   Wake Word: "${wakeWordDetector.WAKE_WORD}"`);
+console.log(`   Sensitivity: ${wakeWordDetector.SIMILARITY_THRESHOLD}% match required`);
+console.log(`   Recognizes variations like: "okay flow", "okay flo", "o flow", etc.`);
+console.log(`📝 To change wake word: window.wakeWordDetector.WAKE_WORD = 'your word'`);
+console.log(`📝 To adjust sensitivity: window.wakeWordDetector.SIMILARITY_THRESHOLD = 50-80 (lower = more lenient)`);
+
+
+// Toggle wake word detection
+window.toggleWakeWord = function(btn) {
+  if (wakeWordDetector.isListeningForWakeWord) {
+    console.log('Stopping wake word detection');
+    wakeWordDetector.stop();
+    btn.classList.remove('bg-indigo-600');
+    btn.classList.add('bg-gray-600');
+    btn.textContent = '🎤 Okay Flow (OFF)';
+  } else {
+    console.log('Starting wake word detection');
+    wakeWordDetector.start();
+    btn.classList.remove('bg-gray-600');
+    btn.classList.add('bg-indigo-600');
+    btn.textContent = '🎤 Okay Flow (ON)';
+  }
+};
+
+// Start wake word detection on page load
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('🎤 Starting wake word detection on page load');
+  wakeWordDetector.start();
+  // Update button state
+  const btn = document.getElementById('wake-word-toggle-btn');
+  if (btn) {
+    btn.classList.add('bg-indigo-600');
+    btn.textContent = '🎤 Okay Flow (ON)';
+  }
+});
+
+console.log('✅ Wake Word Detector Loaded - "Okay Flow" enabled');
+
+// 🔔 IN-APP NOTIFICATION ALERT SYSTEM
+class NotificationAlertSystem {
+  constructor() {
+    this.pollInterval = 2000; // Check every 2 seconds
+    this.isInitialized = false;
+    this.lastNotificationTime = 0;
+    this.currentlyPlaying = false;
+    this.speechUtterances = [];
+  }
+
+  async start() {
+    if (this.isInitialized) {
+      console.log('⚠️ NotificationAlertSystem already running');
+      return;
+    }
+    this.isInitialized = true;
+    console.log('🔔 NotificationAlertSystem started - polling for alerts');
+    this.poll();
+  }
+
+  async poll() {
+    try {
+      const response = await fetch('/api/notifications/unread/', {
+        headers: { 
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'include'  // Include session cookies
+      });
+      
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      const data = await response.json();
+      
+      if (data.count > 0) {
+        const notifications = data.notifications;
+        const newNotifications = notifications.filter(n => {
+          const notifTime = new Date(n.created_at).getTime();
+          return notifTime > this.lastNotificationTime;
+        });
+        
+        if (newNotifications.length > 0) {
+          console.log(`🔔 New notifications detected: ${newNotifications.length}`);
+          for (const notif of newNotifications) {
+            this._showNotificationAlert(notif);
+            this.lastNotificationTime = Math.max(
+              this.lastNotificationTime,
+              new Date(notif.created_at).getTime()
+            );
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ Notification polling error:', error);
+    }
+    
+    // Continue polling
+    setTimeout(() => this.poll(), this.pollInterval);
+  }
+
+  _showNotificationAlert(notification) {
+    console.log(`🔔 Showing alert: ${notification.title}`);
+    
+    // Create modal HTML
+    const modalHTML = `
+      <div id="notification-alert-backdrop" class="position-fixed top-0 start-0 w-100 h-100" 
+           style="background: rgba(0,0,0,0.6); z-index: 10000;"></div>
+      <div class="position-fixed top-50 start-50 translate-middle" style="z-index: 10001;">
+        <div class="card border-0 shadow-xl" style="width: 500px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+          <div class="card-body text-white p-5">
+            <div style="font-size: 48px; margin-bottom: 1rem; text-align: center; animation: bounce 1s infinite;">
+              🔔
+            </div>
+            <h4 class="card-title text-center mb-2" style="font-size: 24px;">${notification.title}</h4>
+            <p class="card-text text-center mb-4" style="font-size: 18px; line-height: 1.6; min-height: 60px;">
+              ${notification.message}
+            </p>
+            <div class="text-center">
+              <button class="btn btn-light btn-sm me-2" 
+                      onclick="window.notificationAlerts._hideAlert(); window.notificationAlerts._stopAllAudio();" 
+                      style="padding: 10px 30px; font-size: 16px;">
+                ✋ Stop
+              </button>
+              <button class="btn btn-warning btn-sm" 
+                      onclick="window.notificationAlerts._snoozeReminder(${notification.id}, 5);" 
+                      style="padding: 10px 30px; font-size: 16px;">
+                😴 Snooze 5 min
+              </button>
+            </div>
+            <div class="text-center mt-3">
+              <small id="notification-repeat-count" style="color: rgba(255,255,255,0.8);">🔊 Speaking... (1/4)</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Add to page
+    const alertContainer = document.createElement('div');
+    alertContainer.id = 'notification-alert-container';
+    alertContainer.innerHTML = modalHTML;
+    document.body.appendChild(alertContainer);
+    
+    // Add CSS animations
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes bounce {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.8; transform: scale(1.15); }
+      }
+      @keyframes fadeOut {
+        0% { opacity: 1; }
+        100% { opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    // Play sound
+    this._playNotificationSound();
+    
+    // Speak message 4 times
+    this._speakMessage(notification.message, 4);
+    
+    // Auto-hide after 30 seconds if still showing
+    setTimeout(() => {
+      const container = document.getElementById('notification-alert-container');
+      if (container) {
+        this._hideAlert();
+      }
+    }, 30000);
+  }
+
+  _playNotificationSound() {
+    // Create a notification sound using Web Audio API
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const now = audioContext.currentTime;
+    
+    // Create a beep sound
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+    
+    // Beep pattern: quick rising beeps
+    osc.frequency.setValueAtTime(800, now);
+    osc.frequency.setValueAtTime(1000, now + 0.1);
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.setValueAtTime(0, now + 0.15);
+    
+    osc.start(now);
+    osc.stop(now + 0.15);
+    
+    console.log('🔊 Notification sound played');
+  }
+
+  _speakMessage(message, repeatCount) {
+    if (!('speechSynthesis' in window)) {
+      console.error('❌ Speech synthesis not supported');
+      return;
+    }
+    
+    console.log(`🎤 Speaking message ${repeatCount} times`);
+    this.currentlyPlaying = true;
+    
+    const speak = (count) => {
+      if (count <= 0) {
+        this.currentlyPlaying = false;
+        console.log('✅ Message spoken 4 times');
+        return;
+      }
+      
+      const utterance = new SpeechSynthesisUtterance(message);
+      utterance.rate = 0.9;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+      
+      const displayCount = repeatCount - count + 1;
+      const counterEl = document.getElementById('notification-repeat-count');
+      if (counterEl) {
+        counterEl.textContent = `🔊 Speaking... (${displayCount}/${repeatCount})`;
+      }
+      
+      utterance.onend = () => {
+        console.log(`✓ Spoken ${displayCount}/${repeatCount}`);
+        // Small delay between repetitions
+        setTimeout(() => speak(count - 1), 800);
+      };
+      
+      utterance.onerror = (event) => {
+        console.error('❌ Speech error:', event.error);
+        speak(count - 1);
+      };
+      
+      this.speechUtterances.push(utterance);
+      window.speechSynthesis.speak(utterance);
+    };
+    
+    speak(repeatCount);
+  }
+
+  _hideAlert() {
+    const container = document.getElementById('notification-alert-container');
+    if (container) {
+      container.style.animation = 'fadeOut 0.3s ease-out';
+      setTimeout(() => container.remove(), 300);
+      console.log('✅ Alert hidden');
+    }
+  }
+
+  _stopAllAudio() {
+    // Stop speech synthesis
+    window.speechSynthesis.cancel();
+    this.speechUtterances = [];
+    this.currentlyPlaying = false;
+    console.log('🛑 All audio stopped');
+  }
+
+  async _snoozeReminder(notificationId, minutes) {
+    console.log(`😴 Snoozing reminder for ${minutes} minutes...`);
+    this._hideAlert();
+    this._stopAllAudio();
+    
+    try {
+      // Mark notification as read
+      const response = await fetch(`/api/notifications/${notificationId}/read/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        console.log('✅ Reminder snoozed');
+        // Show snooze confirmation
+        const utterance = new SpeechSynthesisUtterance(`Reminder snoozed for ${minutes} minutes`);
+        window.speechSynthesis.speak(utterance);
+      }
+    } catch (error) {
+      console.error('❌ Snooze error:', error);
+    }
+  }
+
+  _getToken() {
+    // Try to get auth token from localStorage or cookie
+    const token = localStorage.getItem('auth_token') || 
+                  this._getCookie('auth_token') ||
+                  document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    return token;
+  }
+
+  _getCookie(name) {
+    const nameEQ = name + "=";
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+      cookie = cookie.trim();
+      if (cookie.indexOf(nameEQ) === 0) {
+        return decodeURIComponent(cookie.substring(nameEQ.length));
+      }
+    }
+    return null;
+  }
+}
+
+// Initialize notification alert system
+window.notificationAlerts = new NotificationAlertSystem();
+document.addEventListener('DOMContentLoaded', () => {
+  window.notificationAlerts.start();
+});
+
+console.log('✅ Notification Alert System Loaded');
+  </script>
 </head>
 <body>
   {% load static %}
@@ -185,6 +1135,15 @@
                         </a>
                     </div>
                 </div>
+            </li>
+            
+            <!-- Hey Notiflow Toggle Button -->
+            <li>
+              <button id="wake-word-toggle-btn" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-indigo-700 transition-colors bg-indigo-600" 
+                      onclick="window.toggleWakeWord(this)" title="Toggle Okay Flow voice command">
+                <i class="bi bi-mic"></i>
+                <span class="hidden md:inline">Okay Flow</span>
+              </button>
             </li>
             
             <!-- User Dropdown -->

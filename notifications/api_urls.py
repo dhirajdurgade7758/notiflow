@@ -6,9 +6,11 @@ urlpatterns = [
     path('reminders/', api_views.ReminderListCreateAPI.as_view(), name="api_reminders"),
     path('reminders/<uuid:pk>/', api_views.ReminderDetailAPI.as_view(), name="api_reminder_detail"),
     path('reminders/<uuid:pk>/cancel/', api_views.cancel_reminder_api, name="api_cancel_reminder"),
+    path('reminders/snooze/', api_views.snooze_reminder, name="api_snooze_reminder"),
 
     # Notifications
     path('notifications/', api_views.NotificationListAPI.as_view(), name="api_notifications"),
+    path('notifications/unread/', api_views.get_unread_notifications, name="api_unread_notifications"),
     path('notifications/<int:pk>/read/', api_views.mark_read_api, name="api_notif_read"),
     path('notifications/<int:pk>/unread/', api_views.mark_unread_api, name="api_notif_unread"),
 ]
