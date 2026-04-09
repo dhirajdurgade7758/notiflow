@@ -267,9 +267,14 @@ def smart_reminder_view(request):
 
         print(f"Parsed AI data: {ai_data}")
 
-        # ⏰ Fix parsed time
+        # ⏰ Fix parsed time and make timezone-aware
         raw_time = ai_data.get('datetime')
         parsed_time = dateparser.parse(raw_time) if raw_time else None
+        
+        # Make timezone-aware if naive
+        if parsed_time and timezone.is_naive(parsed_time):
+            parsed_time = timezone.make_aware(parsed_time)
+        
         if not parsed_time:
             parsed_time = timezone.now() + timezone.timedelta(minutes=5)
 
@@ -296,15 +301,25 @@ def smart_reminder_view(request):
         notify_type = ai_data.get('notify_type') or 'email'
 
         try:
-            Reminder.objects.create(
+            reminder = Reminder.objects.create(
                 user=request.user,
                 title=parsed_title,
                 message=rewritten_message,
                 repeat=ai_data.get('repeat', 'none'),
                 send_at=parsed_time,
                 notify_type=notify_type,
+                status='scheduled'
             )
-        except Exception:
+            
+            # ⏰ Schedule Celery task
+            schedule_reminder_task.apply_async(
+                args=[reminder.id],
+                eta=reminder.send_at
+            )
+            print(f"✅ Smart reminder {reminder.id} scheduled for {reminder.send_at}")
+            
+        except Exception as e:
+            print(f"❌ Error creating reminder: {e}")
             return _smart_modal_response(
                 request,
                 error_message="We couldn't save this reminder right now. Please try again in a moment.",

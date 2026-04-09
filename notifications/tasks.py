@@ -9,20 +9,31 @@ from django.contrib.auth import get_user_model
 from django.template.loader import render_to_string
 from .ai import generate_ai_prompt, call_llm_api
 from django.utils.timezone import make_aware
+import logging
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, max_retries=3)
 def schedule_reminder_task(self, reminder_id):
     try:
+        logger.info(f"⏰ Task received for reminder {reminder_id}")
         reminder = Reminder.objects.get(id=reminder_id)
+        logger.info(f"📌 Reminder: {reminder.title}, Status: {reminder.status}, Active: {reminder.is_active}")
 
         if not reminder.is_active or reminder.status == 'cancelled':
+            logger.warning(f"⚠️ Reminder {reminder.id} is cancelled or inactive.")
             return f"Reminder {reminder.id} is cancelled or inactive."
 
-        if timezone.now() < reminder.send_at:
+        now = timezone.now()
+        logger.info(f"⏱️ Current time: {now}, Scheduled for: {reminder.send_at}")
+        
+        if now < reminder.send_at:
+            logger.info(f"⏳ Reminder {reminder.id} not due yet. Diff: {reminder.send_at - now}")
             return f"Reminder {reminder.id} not due yet."
 
+        logger.info(f"✅ Reminder {reminder.id} is due! Processing now...")
+        
         # 🔔 Send the actual notification
         if reminder.notify_type == 'email':
             try:
@@ -39,11 +50,12 @@ def schedule_reminder_task(self, reminder_id):
                 raise self.retry(exc=email_error)
 
         elif reminder.notify_type == 'inapp':
-            InAppNotification.objects.create(
+            notif = InAppNotification.objects.create(
                 user=reminder.user,
                 title=f"⏰ Reminder: {reminder.title}",
                 message=reminder.message
             )
+            logger.info(f"✅ In-app notification {notif.id} created for {reminder.user.username}")
             print(f"✅ In-app notification sent to {reminder.user.username}")
 
         elif reminder.notify_type == 'sms':
@@ -89,6 +101,7 @@ def schedule_reminder_task(self, reminder_id):
         return f"Reminder {reminder.id} sent successfully."
 
     except Exception as e:
+        logger.error(f"❌ Error processing reminder {reminder_id}: {str(e)}", exc_info=True)
         reminder = Reminder.objects.filter(id=reminder_id).first()
         if reminder:
             _handle_failure(reminder, e)
