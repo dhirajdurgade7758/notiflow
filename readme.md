@@ -1,5 +1,13 @@
 # Notiflow 🔔 AI-Powered Voice & Smart Reminder System
 
+## 🎥 Project Demo (YouTube)
+
+[![Watch the demo](https://img.youtube.com/vi/gUYD-nBeeJw/maxresdefault.jpg)](https://youtu.be/gUYD-nBeeJw)
+
+> 🚀 Click above to watch the full project demo, system design explanation, and live walkthrough.
+
+---
+
 Notiflow is a comprehensive Django application that combines scheduled tasks, multi-channel notifications, AI capabilities, and **voice-activated controls**. It helps users stay productive by creating reminders via **voice commands**, **email**, **in-app alerts**, and **SMS**, powered by **Celery, Redis**, **Google Gemini AI**, and **Web Speech API**.
 
 ## ✨ Key Features
